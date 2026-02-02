@@ -1,0 +1,141 @@
+#!/bin/bash
+#
+# claude-by-glm - Claude Code launcher for Z.ai GLM models
+#
+# This script sets up the environment for using Z.ai GLM models
+# with Claude Code, then launches the claude command.
+#
+# Environment variables:
+#   GLM_MODEL_REPO - Optional: Custom model repository URL
+#   GLM_SKIP_PATH  - If set, skip PATH modification
+#
+# Usage:
+#   ~/.glm-mcp/bin/claude-by-glm [claude arguments...]
+#
+
+set -euo pipefail
+
+# Script directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+KEYCHAIN_SERVICE="z.ai-api-key"
+KEYCHAIN_ACCOUNT="${USER:-$LOGNAME}"
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+
+print_error() {
+    echo -e "${RED}ERROR:${NC} $*" >&2
+}
+
+print_info() {
+    echo -e "${BLUE}INFO:${NC} $*"
+}
+
+print_warning() {
+    echo -e "${YELLOW}WARNING:${NC} $*"
+}
+
+# Detect current shell
+detect_shell() {
+    if [[ -n "${ZSH_VERSION:-}" ]]; then
+        echo "zsh"
+    elif [[ -n "${BASH_VERSION:-}" ]]; then
+        echo "bash"
+    elif [[ -n "${FISH_VERSION:-}" ]]; then
+        echo "fish"
+    else
+        # Return unknown for non-interactive shells
+        echo "unknown"
+    fi
+}
+
+# Fetch API key from keychain
+fetch_api_key() {
+    local api_key
+    api_key="$(security find-generic-password \
+        -s "$KEYCHAIN_SERVICE" \
+        -a "$KEYCHAIN_ACCOUNT" \
+        -w 2>/dev/null)" || return 1
+
+    # Basic validation
+    if [[ -z "$api_key" ]]; then
+        return 1
+    fi
+
+    echo "$api_key"
+}
+
+# Setup PATH for this session
+setup_path() {
+    if [[ "${GLM_SKIP_PATH:-}" == "1" ]]; then
+        return 0
+    fi
+
+    # Add ~/.glm-mcp/bin to PATH if not already there
+    local glm_bin="$HOME/.glm-mcp/bin"
+    if [[ -d "$glm_bin" ]]; then
+        case ":$PATH:" in
+            *:"$glm_bin":*) ;;
+            *)
+                export PATH="$glm_bin:$PATH"
+                print_info "Added to PATH: $glm_bin"
+                ;;
+        esac
+    fi
+}
+
+# Main execution
+main() {
+    # Fetch API key from keychain
+    local api_key
+    api_key="$(fetch_api_key)"
+    local fetch_status=$?
+
+    if [[ $fetch_status -ne 0 ]] || [[ -z "$api_key" ]]; then
+        cat << EOF
+ERROR: Failed to retrieve Z.ai API key from keychain.
+
+Required: service="$KEYCHAIN_SERVICE", account="$KEYCHAIN_ACCOUNT"
+
+Please register your API key first:
+  ~/.glm-mcp/bin/install-key.sh
+
+Or get one from: https://z.ai/subscribe?ic=EBGYZCJRYJ
+EOF
+        exit 1
+    fi
+
+    # Setup PATH
+    setup_path
+
+    # Export environment variables for Z.ai GLM models
+    export ANTHROPIC_AUTH_TOKEN="$api_key"
+    export ANTHROPIC_BASE_URL="https://api.z.ai/api/anthropic"
+    export ANTHROPIC_DEFAULT_HAIKU_MODEL="glm-4.5-air"
+    export ANTHROPIC_DEFAULT_SONNET_MODEL="glm-4.6"
+    export ANTHROPIC_DEFAULT_OPUS_MODEL="glm-4.7"
+
+    # Optional: Custom model repository
+    if [[ -n "${GLM_MODEL_REPO:-}" ]]; then
+        export ANTHROPIC_MODEL_REPO="$GLM_MODEL_REPO"
+        print_info "Using custom model repository: $GLM_MODEL_REPO"
+    fi
+
+    # Claude settings (optional, can be overridden)
+    local claude_settings="$HOME/.claude/settings.glm.json"
+    if [[ -f "$claude_settings" ]]; then
+        export CLAUDE_SETTINGS="$claude_settings"
+    fi
+
+    # Activate GLM mode for MCP wrapper
+    export GLM_MODE=1
+
+    # Launch claude with all arguments
+    exec claude "$@"
+}
+
+main "$@"

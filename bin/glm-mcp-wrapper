@@ -1,0 +1,106 @@
+#!/usr/bin/env bash
+#
+# glm-mcp-wrapper - MCP wrapper for Z.ai GLM models
+#
+# This wrapper only activates when GLM_MODE=1 is set.
+# It fetches the API key from macOS keychain and executes the Z.ai MCP server.
+#
+# Security:
+# - API key is never written to files
+# - Uses macOS keychain for secure storage
+# - Validates environment before execution
+#
+
+set -euo pipefail
+
+# Configuration
+KEYCHAIN_SERVICE="z.ai-api-key"
+KEYCHAIN_ACCOUNT="${USER:-$LOGNAME}"
+WRAPPER_NAME="glm-mcp-wrapper"
+
+# Logging (stderr only, no sensitive data)
+log_error() {
+    echo "[$WRAPPER_NAME] ERROR: $*" >&2
+}
+
+log_info() {
+    echo "[$WRAPPER_NAME] INFO: $*" >&2
+}
+
+# Check if GLM_MODE is enabled
+check_glm_mode() {
+    if [[ "${GLM_MODE:-}" != "1" ]]; then
+        log_info "GLM_MODE not set, waiting..."
+        log_info "To activate: export GLM_MODE=1"
+        # Portable infinite sleep (POSIX-compliant)
+        while true; do sleep 86400; done
+    fi
+}
+
+# Fetch API key from keychain
+fetch_api_key() {
+    local api_key
+    api_key="$(security find-generic-password \
+        -s "$KEYCHAIN_SERVICE" \
+        -a "$KEYCHAIN_ACCOUNT" \
+        -w 2>/dev/null)" || return 1
+
+    # Validate API key format (basic check)
+    if [[ -z "$api_key" ]]; then
+        log_error "API key is empty"
+        return 1
+    fi
+
+    # Basic format validation (accepts alphanumeric plus common special chars)
+    if [[ ! "$api_key" =~ ^[a-zA-Z0-9._-]+$ ]]; then
+        log_error "Invalid API key format"
+        return 1
+    fi
+
+    echo "$api_key"
+}
+
+# Verify dependencies
+verify_dependencies() {
+    local deps=("security" "npx")
+    for dep in "${deps[@]}"; do
+        if ! command -v "$dep" &>/dev/null; then
+            log_error "Required dependency not found: $dep"
+            return 1
+        fi
+    done
+}
+
+# Main execution
+main() {
+    # Check GLM_MODE first
+    check_glm_mode
+
+    # Verify dependencies
+    if ! verify_dependencies; then
+        log_error "Dependency verification failed"
+        exit 1
+    fi
+
+    # Fetch API key from keychain
+    API_KEY="$(fetch_api_key)"
+    local fetch_status=$?
+
+    if [[ $fetch_status -ne 0 ]] || [[ -z "$API_KEY" ]]; then
+        log_error "Failed to retrieve API key from keychain"
+        log_error "Run: ~/.glm-mcp/bin/install-key.sh"
+        exit 1
+    fi
+
+    # Export API key and execute Z.ai MCP server
+    # Using exec to replace this process with the MCP server
+    export ZAI_API_KEY="$API_KEY"
+    export Z_AI_MODE="ZAI"
+
+    log_info "Starting Z.ai MCP server..."
+
+    # Execute the MCP server (replaces this process)
+    exec npx -y "@z_ai/mcp-server"
+}
+
+main "$@"
