@@ -3,11 +3,16 @@
 # glm-mcp-wrapper - MCP wrapper for Z.ai GLM models
 #
 # This wrapper only activates when GLM_MODE=1 is set.
-# It fetches the API key from macOS keychain and executes the Z.ai MCP server.
+# It fetches the API key from platform credential storage and executes the Z.ai MCP server.
+#
+# Platform support:
+# - macOS: Keychain (security command)
+# - Linux: libsecret (secret-tool)
+# - Windows: Environment variable (ZAI_API_KEY)
 #
 # Security:
 # - API key is never written to files
-# - Uses macOS keychain for secure storage
+# - Uses platform credential storage
 # - Validates environment before execution
 #
 
@@ -17,6 +22,14 @@ set -euo pipefail
 KEYCHAIN_SERVICE="z.ai-api-key"
 KEYCHAIN_ACCOUNT="${USER:-$LOGNAME}"
 WRAPPER_NAME="glm-mcp-wrapper"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+
+# Source credential abstraction
+source "$PROJECT_DIR/credentials/common.sh"
+
+# Initialize credential backend
+credential_init
 
 # Logging (stderr only, no sensitive data)
 log_error() {
@@ -37,13 +50,10 @@ check_glm_mode() {
     fi
 }
 
-# Fetch API key from keychain
+# Fetch API key from credential storage
 fetch_api_key() {
     local api_key
-    api_key="$(security find-generic-password \
-        -s "$KEYCHAIN_SERVICE" \
-        -a "$KEYCHAIN_ACCOUNT" \
-        -w 2>/dev/null)" || return 1
+    api_key="$(credential_fetch "$KEYCHAIN_SERVICE" "$KEYCHAIN_ACCOUNT" 2>/dev/null)" || return 1
 
     # Validate API key format (basic check)
     if [[ -z "$api_key" ]]; then
@@ -62,13 +72,19 @@ fetch_api_key() {
 
 # Verify dependencies
 verify_dependencies() {
-    local deps=("security" "npx")
+    local deps=("npx")
     for dep in "${deps[@]}"; do
         if ! command -v "$dep" &>/dev/null; then
             log_error "Required dependency not found: $dep"
             return 1
         fi
     done
+
+    # Check platform-specific credential dependencies
+    if ! credential_check_deps; then
+        log_error "Credential storage dependencies not met"
+        return 1
+    fi
 }
 
 # Main execution
@@ -82,12 +98,12 @@ main() {
         exit 1
     fi
 
-    # Fetch API key from keychain
+    # Fetch API key from credential storage
     API_KEY="$(fetch_api_key)"
     local fetch_status=$?
 
     if [[ $fetch_status -ne 0 ]] || [[ -z "$API_KEY" ]]; then
-        log_error "Failed to retrieve API key from keychain"
+        log_error "Failed to retrieve API key from credential storage"
         log_error "Run: ~/.glm-mcp/bin/install-key.sh"
         exit 1
     fi
@@ -96,8 +112,9 @@ main() {
     # Using exec to replace this process with the MCP server
     export ZAI_API_KEY="$API_KEY"
     export Z_AI_MODE="ZAI"
+    unset API_KEY  # Clear local variable
 
-    log_info "Starting Z.ai MCP server..."
+    log_info "Starting Z.ai MCP server (platform: $CREDENTIAL_PLATFORM)..."
 
     # Execute the MCP server (replaces this process)
     exec npx -y "@z_ai/mcp-server"

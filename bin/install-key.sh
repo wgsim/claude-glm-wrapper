@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
 #
-# install-key.sh - Register Z.ai API key in macOS keychain
+# install-key.sh - Register Z.ai API key in platform credential storage
 #
-# This script securely stores the Z.ai API key in the macOS keychain.
+# This script securely stores the Z.ai API key:
+# - macOS: Keychain (security command)
+# - Linux: libsecret (secret-tool)
+# - Windows: Environment variable (ZAI_API_KEY)
+#
 # The API key is never written to any file.
 #
 # Usage:
@@ -16,6 +20,9 @@ KEYCHAIN_SERVICE="z.ai-api-key"
 KEYCHAIN_ACCOUNT="${USER:-$LOGNAME}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+
+# Source credential abstraction
+source "$PROJECT_DIR/credentials/common.sh"
 
 # Colors for output
 RED='\033[0;31m'
@@ -34,6 +41,10 @@ print_success() {
 
 print_info() {
     echo -e "${YELLOW}INFO:${NC} $*"
+}
+
+print_warning() {
+    echo -e "${YELLOW}WARNING:${NC} $*"
 }
 
 # Validate API key format
@@ -71,22 +82,19 @@ validate_api_key() {
 
 # Check if key already exists
 check_existing_key() {
-    if security find-generic-password \
-        -s "$KEYCHAIN_SERVICE" \
-        -a "$KEYCHAIN_ACCOUNT" \
-        &>/dev/null; then
+    if credential_fetch "$KEYCHAIN_SERVICE" "$KEYCHAIN_ACCOUNT" &>/dev/null; then
         return 0
     fi
     return 1
 }
 
-# Store API key in keychain
+# Store API key
 store_api_key() {
     local api_key="$1"
 
     # Check if key already exists
     if check_existing_key; then
-        print_info "API key already exists in keychain"
+        print_info "API key already exists in credential storage"
         read -rp "Overwrite? (y/N): " -n 1 response
         echo
         if [[ ! $response =~ ^[Yy]$ ]]; then
@@ -95,37 +103,56 @@ store_api_key() {
         fi
 
         # Delete existing key first
-        if security delete-generic-password \
-            -s "$KEYCHAIN_SERVICE" \
-            -a "$KEYCHAIN_ACCOUNT" \
-            2>&1; then
-            print_info "Removed existing key"
-        else
-            print_warning "Could not delete existing key (may not exist)"
-        fi
+        credential_delete "$KEYCHAIN_SERVICE" "$KEYCHAIN_ACCOUNT"
     fi
 
-    # Add new key to keychain (without -U flag for proper ACLs)
-    security add-generic-password \
-        -a "$KEYCHAIN_ACCOUNT" \
-        -s "$KEYCHAIN_SERVICE" \
-        -w "$api_key" \
-        -T "/usr/local/bin/node" \
-        -T "/opt/homebrew/bin/node" \
-        -T "/usr/local/bin/npx" \
-        -T "/opt/homebrew/bin/npx"
+    # Store new key
+    credential_store "$KEYCHAIN_SERVICE" "$KEYCHAIN_ACCOUNT" "$api_key"
 
-    print_success "API key saved to keychain"
+    print_success "API key saved to credential storage"
+}
+
+# Get platform-specific credential name
+get_credential_name() {
+    case "$CREDENTIAL_PLATFORM" in
+        macos)
+            echo "macOS Keychain"
+            ;;
+        linux)
+            echo "libsecret (secret-tool)"
+            ;;
+        windows)
+            echo "Environment variable (ZAI_API_KEY)"
+            ;;
+        *)
+            echo "credential storage"
+            ;;
+    esac
 }
 
 # Main execution
 main() {
+    # Initialize credential backend
+    credential_init
+
     echo "=== Z.ai API Key Registration ==="
     echo
-    echo "This will store your Z.ai API key in the macOS keychain."
+    echo "This will store your Z.ai API key in $(get_credential_name)."
     echo "Service: $KEYCHAIN_SERVICE"
     echo "Account: $KEYCHAIN_ACCOUNT"
+    echo "Platform: $CREDENTIAL_PLATFORM"
     echo
+
+    # Windows special handling
+    if [[ "$CREDENTIAL_PLATFORM" == "windows" ]]; then
+        print_info "On Windows, please set the ZAI_API_KEY environment variable:"
+        echo "  set ZAI_API_KEY=your_api_key"
+        echo "  Or add to System Environment Variables"
+        echo
+        print_info "After setting, verify with:"
+        echo "  echo %ZAI_API_KEY%"
+        return 0
+    fi
 
     # Prompt for API key
     read -rp "Enter your Z.ai API key: " -s api_key
@@ -137,17 +164,21 @@ main() {
         exit 1
     fi
 
-    # Store in keychain
+    # Store in credential storage
     if ! store_api_key "$api_key"; then
-        print_error "Failed to store API key in keychain"
+        print_error "Failed to store API key"
         exit 1
     fi
 
     echo
     print_success "Setup complete! You can now use claude-by-glm."
     echo
-    echo "To verify:"
-    echo "  security find-generic-password -s $KEYCHAIN_SERVICE -a $KEYCHAIN_ACCOUNT -w"
+    print_info "To verify, run:"
+    if [[ "$CREDENTIAL_PLATFORM" == "macos" ]]; then
+        echo "  security find-generic-password -s $KEYCHAIN_SERVICE -a $KEYCHAIN_ACCOUNT -w"
+    elif [[ "$CREDENTIAL_PLATFORM" == "linux" ]]; then
+        echo "  secret-tool lookup $KEYCHAIN_SERVICE $KEYCHAIN_SERVICE account $KEYCHAIN_ACCOUNT"
+    fi
 }
 
 main "$@"

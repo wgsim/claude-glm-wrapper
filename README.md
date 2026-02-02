@@ -1,14 +1,14 @@
 # GLM MCP Wrapper System
 
-Use Z.ai GLM models (glm-4.5-air, glm-4.6, glm-4.7) with Claude Code while keeping API keys secure in macOS keychain.
+Use Z.ai GLM models (glm-4.5-air, glm-4.6, glm-4.7) with Claude Code while keeping API keys secure in platform credential storage.
 
 ## Features
 
 - **Single API Key**: Uses ONE Z.ai API key for both model API and MCP server
-- **Secure Storage**: macOS keychain, no hardcoded credentials in JSON
+- **Multi-Platform**: macOS (Keychain), Linux (libsecret), Windows (env var)
+- **Secure Storage**: Platform credential storage, no hardcoded credentials in JSON
 - **Dual Mode**: Same configuration works for both official Claude and GLM models
 - **MCP Tools**: Access to Z.ai MCP server tools when in GLM mode
-- **macOS Native**: Full keychain integration, secure credential management
 
 ## Quick Start
 
@@ -66,7 +66,9 @@ Z.ai MCP Server
 ## Requirements
 
 - Node.js (v18+) with npx
-- macOS (primary), Linux (partial)
+- **macOS**: `security` command (built-in)
+- **Linux**: `secret-tool` from libsecret-tools
+- **Windows**: PowerShell (built-in)
 - Claude Code installed
 
 ## License

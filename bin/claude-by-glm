@@ -5,6 +5,11 @@
 # This script sets up the environment for using Z.ai GLM models
 # with Claude Code, then launches the claude command.
 #
+# Platform support:
+# - macOS: Keychain (security command)
+# - Linux: libsecret (secret-tool)
+# - Windows: Environment variable (ZAI_API_KEY)
+#
 # Environment variables:
 #   GLM_MODEL_REPO - Optional: Custom model repository URL
 #   GLM_SKIP_PATH  - If set, skip PATH modification
@@ -17,8 +22,17 @@ set -euo pipefail
 
 # Script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+
+# Configuration
 KEYCHAIN_SERVICE="z.ai-api-key"
 KEYCHAIN_ACCOUNT="${USER:-$LOGNAME}"
+
+# Source credential abstraction
+source "$PROJECT_DIR/credentials/common.sh"
+
+# Initialize credential backend
+credential_init
 
 # Colors
 RED='\033[0;31m'
@@ -48,18 +62,14 @@ detect_shell() {
     elif [[ -n "${FISH_VERSION:-}" ]]; then
         echo "fish"
     else
-        # Return unknown for non-interactive shells
         echo "unknown"
     fi
 }
 
-# Fetch API key from keychain
+# Fetch API key from credential storage
 fetch_api_key() {
     local api_key
-    api_key="$(security find-generic-password \
-        -s "$KEYCHAIN_SERVICE" \
-        -a "$KEYCHAIN_ACCOUNT" \
-        -w 2>/dev/null)" || return 1
+    api_key="$(credential_fetch "$KEYCHAIN_SERVICE" "$KEYCHAIN_ACCOUNT" 2>/dev/null)" || return 1
 
     # Basic validation
     if [[ -z "$api_key" ]]; then
@@ -88,16 +98,43 @@ setup_path() {
     fi
 }
 
+# Get platform-specific credential storage name
+get_credential_storage_name() {
+    case "$CREDENTIAL_PLATFORM" in
+        macos)
+            echo "macOS Keychain"
+            ;;
+        linux)
+            echo "libsecret (secret-tool)"
+            ;;
+        windows)
+            echo "Environment variable (ZAI_API_KEY)"
+            ;;
+        *)
+            echo "credential storage"
+            ;;
+    esac
+}
+
 # Main execution
 main() {
-    # Fetch API key from keychain
-    local api_key
-    api_key="$(fetch_api_key)"
-    local fetch_status=$?
+    # Windows special handling
+    if [[ "$CREDENTIAL_PLATFORM" == "windows" ]]; then
+        if [[ -z "${ZAI_API_KEY:-}" ]]; then
+            print_error "ZAI_API_KEY environment variable not set"
+            print_info "Set it with: set ZAI_API_KEY=your_api_key"
+            exit 1
+        fi
+        local api_key="$ZAI_API_KEY"
+    else
+        # Fetch API key from credential storage
+        local api_key
+        api_key="$(fetch_api_key)"
+        local fetch_status=$?
 
-    if [[ $fetch_status -ne 0 ]] || [[ -z "$api_key" ]]; then
-        cat << EOF
-ERROR: Failed to retrieve Z.ai API key from keychain.
+        if [[ $fetch_status -ne 0 ]] || [[ -z "$api_key" ]]; then
+            cat << EOF
+ERROR: Failed to retrieve Z.ai API key from $(get_credential_storage_name).
 
 Required: service="$KEYCHAIN_SERVICE", account="$KEYCHAIN_ACCOUNT"
 
@@ -106,7 +143,8 @@ Please register your API key first:
 
 Or get one from: https://z.ai/subscribe?ic=EBGYZCJRYJ
 EOF
-        exit 1
+            exit 1
+        fi
     fi
 
     # Setup PATH
