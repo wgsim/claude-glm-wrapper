@@ -15,14 +15,18 @@
 
 set -euo pipefail
 
-# Configuration
-KEYCHAIN_SERVICE="z.ai-api-key"
-KEYCHAIN_ACCOUNT="${USER:-$LOGNAME}"
+# Script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
-# Source credential abstraction
+# Source credential abstraction (loads security.conf)
 source "$PROJECT_DIR/credentials/common.sh"
+
+# Initialize credential backend
+if ! credential_init; then
+    print_error "Failed to initialize credential backend for platform: $CREDENTIAL_PLATFORM"
+    exit 1
+fi
 
 # Colors for output
 RED='\033[0;31m'
@@ -112,24 +116,6 @@ store_api_key() {
     print_success "API key saved to credential storage"
 }
 
-# Get platform-specific credential name
-get_credential_name() {
-    case "$CREDENTIAL_PLATFORM" in
-        macos)
-            echo "macOS Keychain"
-            ;;
-        linux)
-            echo "libsecret (secret-tool)"
-            ;;
-        windows)
-            echo "Environment variable (ZAI_API_KEY)"
-            ;;
-        *)
-            echo "credential storage"
-            ;;
-    esac
-}
-
 # Main execution
 main() {
     # Initialize credential backend
@@ -137,7 +123,7 @@ main() {
 
     echo "=== Z.ai API Key Registration ==="
     echo
-    echo "This will store your Z.ai API key in $(get_credential_name)."
+    echo "This will store your Z.ai API key in $(get_credential_storage_name)."
     echo "Service: $KEYCHAIN_SERVICE"
     echo "Account: $KEYCHAIN_ACCOUNT"
     echo "Platform: $CREDENTIAL_PLATFORM"
@@ -177,7 +163,7 @@ main() {
     if [[ "$CREDENTIAL_PLATFORM" == "macos" ]]; then
         echo "  security find-generic-password -s $KEYCHAIN_SERVICE -a $KEYCHAIN_ACCOUNT -w"
     elif [[ "$CREDENTIAL_PLATFORM" == "linux" ]]; then
-        echo "  secret-tool lookup $KEYCHAIN_SERVICE $KEYCHAIN_SERVICE account $KEYCHAIN_ACCOUNT"
+        echo "  secret-tool lookup glm-wrapper-service $KEYCHAIN_SERVICE glm-wrapper-account $KEYCHAIN_ACCOUNT"
     fi
 }
 

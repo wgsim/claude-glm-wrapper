@@ -19,13 +19,11 @@
 set -euo pipefail
 
 # Configuration
-KEYCHAIN_SERVICE="z.ai-api-key"
-KEYCHAIN_ACCOUNT="${USER:-$LOGNAME}"
 WRAPPER_NAME="glm-mcp-wrapper"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
-# Source credential abstraction
+# Source credential abstraction (loads security.conf)
 source "$PROJECT_DIR/credentials/common.sh"
 
 # Initialize credential backend
@@ -108,11 +106,14 @@ main() {
         exit 1
     fi
 
+    # Disable core dumps BEFORE exporting credentials to prevent leakage
+    ulimit -c 0 2>/dev/null || true
+
     # Export API key and execute Z.ai MCP server
     # Using exec to replace this process with the MCP server
     export ZAI_API_KEY="$API_KEY"
     export Z_AI_MODE="ZAI"
-    unset API_KEY  # Clear local variable
+    unset API_KEY  # Clear local variable immediately
 
     log_info "Starting Z.ai MCP server (platform: $CREDENTIAL_PLATFORM)..."
 

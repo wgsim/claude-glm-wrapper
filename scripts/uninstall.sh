@@ -11,8 +11,20 @@
 
 set -euo pipefail
 
-# Configuration
-INSTALL_DIR="$HOME/.glm-mcp"
+# Script directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+
+# Source security configuration
+source "$PROJECT_DIR/credentials/security.conf" 2>/dev/null || {
+    # Fallback if security.conf not found
+    KEYCHAIN_SERVICE="z.ai-api-key"
+    KEYCHAIN_ACCOUNT="${USER:-$LOGNAME}"
+    GLM_INSTALL_DIR="${HOME}/.glm-mcp"
+}
+
+# Use config value with fallback
+INSTALL_DIR="${GLM_INSTALL_DIR:-$HOME/.glm-mcp}"
 
 # Colors
 RED='\033[0;31m'
@@ -221,30 +233,47 @@ remove_path_config() {
 remove_keychain_entry() {
     case "$(detect_os)" in
         macos)
-            print_step "Removing GLM model API key from keychain..."
-            local keychain_service="glm-coding-plan"
-            local keychain_account="${USER:-$LOGNAME}"
+            print_step "Removing API key from keychain..."
+            print_info "Service: $KEYCHAIN_SERVICE"
+            print_info "Account: $KEYCHAIN_ACCOUNT"
 
             if security find-generic-password \
-                -s "$keychain_service" \
-                -a "$keychain_account" \
+                -s "$KEYCHAIN_SERVICE" \
+                -a "$KEYCHAIN_ACCOUNT" \
                 &>/dev/null; then
 
-                security delete-generic-password \
-                    -s "$keychain_service" \
-                    -a "$keychain_account" \
-                    &>/dev/null || true
+                read -rp "Remove API key from keychain? (y/N): " -n 1 -r
+                echo
 
-                print_success "GLM model API key removed from keychain"
+                if [[ $REPLY =~ ^[Yy]$ ]]; then
+                    security delete-generic-password \
+                        -s "$KEYCHAIN_SERVICE" \
+                        -a "$KEYCHAIN_ACCOUNT" \
+                        &>/dev/null || true
+
+                    print_success "API key removed from keychain"
+                else
+                    print_info "API key kept in keychain"
+                fi
             else
-                print_info "No GLM model API key found in keychain"
+                print_info "No API key found in keychain"
             fi
-
-            # Note: Don't remove Z.ai API key (used by MCP wrapper)
-            print_info "Note: Z.ai MCP wrapper API key (z.ai-api-key) is kept"
             ;;
-        linux|windows|*)
-            print_info "Keychain removal only applicable to macOS"
+        linux)
+            print_step "Removing API key from credential storage..."
+            if command -v secret-tool &>/dev/null; then
+                if secret-tool clear "glm-wrapper-service" "$KEYCHAIN_SERVICE" "glm-wrapper-account" "$KEYCHAIN_ACCOUNT" &>/dev/null; then
+                    print_success "API key removed from libsecret"
+                else
+                    print_info "No API key found in libsecret"
+                fi
+            else
+                print_info "secret-tool not available"
+            fi
+            ;;
+        windows|*)
+            print_info "Credential removal manual on this platform"
+            print_info "Windows: Clear ZAI_API_KEY environment variable if set"
             ;;
     esac
 }
@@ -332,16 +361,15 @@ print_completion() {
         case "$(detect_os)" in
             macos)
                 echo "  - Installation directory moved to trash"
-                echo "  - GLM model API key removed from keychain"
-                echo "  - Z.ai MCP wrapper API key kept (z.ai-api-key)"
+                echo "  - API key removed from keychain (if confirmed)"
                 ;;
             linux)
                 echo "  - Installation directory moved to trash"
-                echo "  - Keychain removal not applicable on Linux"
+                echo "  - API key removed from libsecret (if found)"
                 ;;
             windows)
                 echo "  - Installation directory moved to Recycle Bin"
-                echo "  - Keychain removal not applicable on Windows"
+                echo "  - Remember to clear ZAI_API_KEY environment variable"
                 ;;
         esac
     else

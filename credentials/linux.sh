@@ -45,14 +45,13 @@ credential_store_platform() {
     local password="$3"
 
     # Delete existing entry first
-    secret-tool clear "$service" "$account" &>/dev/null || true
+    secret-tool clear "glm-wrapper-service" "$service" "glm-wrapper-account" "$account" &>/dev/null || true
 
-    # Store new credential
-    # secret-tool stores with label and attributes
+    # Store with unique prefix to avoid conflicts with other apps
     echo "$password" | secret-tool store \
         --label="claude-glm-wrapper: $service" \
-        "$service" "$service" \
-        "account" "$account"
+        "glm-wrapper-service" "$service" \
+        "glm-wrapper-account" "$account"
 
     log_info "Credential stored for service: $service"
 }
@@ -63,7 +62,7 @@ credential_fetch_platform() {
     local account="$2"
 
     local password
-    password="$(secret-tool lookup "$service" "$service" "account" "$account" 2>/dev/null)" || return 1
+    password="$(secret-tool lookup "glm-wrapper-service" "$service" "glm-wrapper-account" "$account" 2>/dev/null)" || return 1
 
     if [[ -z "$password" ]]; then
         log_error "Retrieved password is empty"
@@ -78,7 +77,7 @@ credential_delete_platform() {
     local service="$1"
     local account="$2"
 
-    if secret-tool clear "$service" "$service" "account" "$account" &>/dev/null; then
+    if secret-tool clear "glm-wrapper-service" "$service" "glm-wrapper-account" "$account" &>/dev/null; then
         log_info "Credential deleted for service: $service"
     else
         log_info "Credential not found (may not exist): $service"

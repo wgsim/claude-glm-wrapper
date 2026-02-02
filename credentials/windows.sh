@@ -37,25 +37,36 @@ credential_store_platform() {
     local account="$2"
     local password="$3"
 
-    # Use PowerShell to store credential
-    # Target name format: claude-glm-wrapper:service:account
-    local target_name="claude-glm-wrapper:${service}:${account}"
+    # Windows does not support programmatic credential retrieval
+    # from Credential Manager for security reasons.
+    # We explicitly inform the user and guide them to use environment variables.
 
-    powershell.exe -NoProfile -Command "
-        try {
-            \$password = '${password}' | ConvertTo-SecureString -AsPlainText -Force
-            \$credential = New-Object System.Management.Automation.PSCredential ('${account}', \$password)
-            Write-Host 'Storing credential for ${service}'
-        } catch {
-            Write-Error \$_
-            exit 1
-        }
-    " 2>/dev/null
+    log_error "Windows does not support automated credential storage"
+    echo
+    echo "Please set the environment variable manually:"
+    echo
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "PowerShell (current session):"
+    echo "  \$env:ZAI_API_KEY='your_api_key_here'"
+    echo
+    echo "PowerShell (permanent, user-level):"
+    echo "  [System.Environment]::SetEnvironmentVariable('ZAI_API_KEY', 'your_api_key_here', 'User')"
+    echo
+    echo "CMD (current session):"
+    echo "  set ZAI_API_KEY=your_api_key_here"
+    echo
+    echo "CMD (permanent):"
+    echo "  setx ZAI_API_KEY your_api_key_here"
+    echo
+    echo "PowerShell (system-wide - requires admin):"
+    echo "  setx ZAI_API_KEY 'your_api_key_here' /M"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo
+    echo "설정 후, 새 터미널을 열어야 합니다."
+    echo
 
-    # Alternative: Use cmdkey command (older but more compatible)
-    cmdkey /generic:"$target_name" /user:"$account" /pass:"$password" &>/dev/null || true
-
-    log_info "Credential stored for service: $service"
+    # Return failure to indicate automatic storage is not supported
+    return 1
 }
 
 # Fetch credential using environment variable (Windows limitation)

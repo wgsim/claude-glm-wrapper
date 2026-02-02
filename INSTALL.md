@@ -1,6 +1,6 @@
 # Installation Guide
 
-GLM MCP Wrapper System - Use Z.ai GLM models with Claude Code while keeping API keys secure in macOS keychain.
+GLM MCP Wrapper System - Use Z.ai GLM models with Claude Code while keeping API keys secure in platform credential storage.
 
 ## Prerequisites
 
@@ -8,7 +8,21 @@ GLM MCP Wrapper System - Use Z.ai GLM models with Claude Code while keeping API 
 
 - **Node.js** (v18 or higher recommended)
 - **npx** (comes with Node.js)
-- **macOS** (primary support), Linux (partial), Windows (partial)
+
+### Platform-Specific Requirements
+
+#### macOS
+- `security` command (built-in)
+
+#### Linux
+- `secret-tool` from libsecret-tools
+  - Ubuntu/Debian: `sudo apt-get install libsecret-tools`
+  - Fedora/RHEL: `sudo dnf install libsecret-tools`
+  - Arch: `sudo pacman -S libsecret`
+
+#### Windows
+- PowerShell (built-in)
+- Environment variable `ZAI_API_KEY` must be set manually
 
 ### Verify Prerequisites
 
@@ -19,8 +33,14 @@ node --version
 # Check npx
 npx --version
 
-# Check macOS security command
-security help | head -5
+# macOS: check security command
+security help | head -5        # macOS only
+
+# Linux: check secret-tool
+secret-tool --version          # Linux only
+
+# Windows: check PowerShell
+powershell.exe -Command "echo OK"  # Windows only
 ```
 
 ## Installation Steps
@@ -40,30 +60,15 @@ cd claude-by-glm_safety_setting
 ```
 
 The installer will:
-- Verify dependencies (Node.js, npx, security)
+- Verify dependencies (Node.js, npx, platform-specific tools)
 - Create directory structure at `~/.glm-mcp/`
 - Copy executable files
 - Set appropriate permissions (500 for scripts)
 - Prompt for PATH configuration
 - Prompt for API key registration
+- Prompt for MCP server configuration
 
 ### 3. Installation Prompts
-
-#### API Key Registration
-
-```
-API Key Registration
-Register Z.ai API key now? (y/N):
-```
-
-- **Yes**: Runs `install-key.sh` to store API key in macOS keychain
-- **No**: You can register later using `~/.glm-mcp/bin/install-key.sh`
-
-**Important**: The system uses a **single** Z.ai API key for:
-- Direct model API calls (via `claude-by-glm`)
-- Z.ai MCP server tools (via `glm-mcp-wrapper`)
-
-Both components read from the same keychain entry: `z.ai-api-key`
 
 #### PATH Configuration
 
@@ -83,6 +88,27 @@ Choose [1/2/3]:
 - **Option 2**: Manually add later (see below)
 - **Option 3**: Creates `.no-path-prompt` flag to skip future prompts
 
+#### MCP Server Configuration
+
+```
+MCP Server Configuration
+Enable MCP server?
+ - Yes: Use Z.ai MCP tools (environment variable exposure risk)
+ - No:  More secure, but no MCP tools
+
+Enable MCP server? [Y/n]:
+```
+
+- **Yes** (default): Enables MCP server with Z.ai MCP tools
+  - Creates `~/.glm-mcp/config/mcp.conf` with `GLM_USE_MCP=1`
+  - Environment variable `ZAI_API_KEY` will be exposed to subprocesses
+- **No**: Disables MCP server for enhanced security
+  - Creates `~/.glm-mcp/config/mcp.conf` with `GLM_USE_MCP=0`
+  - No environment variable exposure
+  - No MCP tools available
+
+**Security Note**: MCP server requires the API key to be available as an environment variable to the Z.ai MCP server process. While the wrapper minimizes exposure time (using `unset` and `ulimit -c 0`), there is a brief window where the key could be accessed via `ps` or `/proc`. If you need maximum security, choose "No" to disable MCP.
+
 #### API Key Registration
 
 ```
@@ -90,8 +116,14 @@ API Key Registration
 Register Z.ai API key now? (y/N):
 ```
 
-- **Yes**: Runs `install-key.sh` to store API key in macOS keychain
+- **Yes**: Runs `install-key.sh` to store API key in platform credential storage
 - **No**: You can register later using `~/.glm-mcp/bin/install-key.sh`
+
+**Important**: The system uses a **single** Z.ai API key for:
+- Direct model API calls (via `claude-by-glm`)
+- Z.ai MCP server tools (via `glm-mcp-wrapper`)
+
+Both components read from the same credential entry: `z.ai-api-key`
 
 ## Post-Installation
 
@@ -107,9 +139,14 @@ This stores your API key with:
 - **Service**: `z.ai-api-key`
 - **Account**: Your username (`$USER`)
 
+**Platform Storage**:
+- **macOS**: Keychain (security command)
+- **Linux**: libsecret (secret-tool)
+- **Windows**: Environment variable `ZAI_API_KEY` (set manually)
+
 Get your API key from: https://z.ai/subscribe?ic=EBGYZCJRYJ
 
-**How it works**: Both `claude-by-glm` (for model API) and `glm-mcp-wrapper` (for MCP server) fetch from the same keychain entry.
+**How it works**: Both `claude-by-glm` (for model API) and `glm-mcp-wrapper` (for MCP server) fetch from the same credential storage entry.
 
 ### 2. Configure Claude Code
 
@@ -186,11 +223,12 @@ claude-by-glm [arguments]
 
 ### How It Works
 
-1. **`claude-by-glm`** fetches GLM model API key from keychain (`glm-coding-plan`)
+1. **`claude-by-glm`** fetches API key from credential storage (`z.ai-api-key`)
 2. Sets environment variables for Z.ai GLM models
-3. Sets `GLM_MODE=1` to activate MCP wrapper
-4. Launches `claude` command
-5. **MCP wrapper** detects `GLM_MODE=1`, fetches wrapper API key, connects to Z.ai MCP server
+3. Loads MCP configuration from `~/.glm-mcp/config/mcp.conf`
+4. If `GLM_USE_MCP=1`, sets `GLM_MODE=1` to activate MCP wrapper
+5. Launches `claude` command
+6. **MCP wrapper** detects `GLM_MODE=1`, fetches API key from credential storage, connects to Z.ai MCP server
 
 ### Official Claude (without GLM)
 
@@ -198,6 +236,26 @@ When running `claude` directly (not via `claude-by-glm`):
 - `GLM_MODE` is not set
 - MCP wrapper stays inactive (sleeps)
 - Uses official Anthropic models
+
+## Configuration
+
+### MCP Server Toggle
+
+You can enable or disable MCP server after installation:
+
+```bash
+# Enable MCP server (with tools, has env var exposure risk)
+echo "GLM_USE_MCP=1" > ~/.glm-mcp/config/mcp.conf
+
+# Disable MCP server (more secure, no MCP tools)
+echo "GLM_USE_MCP=0" > ~/.glm-mcp/config/mcp.conf
+```
+
+### Verify Current Configuration
+
+```bash
+cat ~/.glm-mcp/config/mcp.conf
+```
 
 ## Uninstallation
 
@@ -207,7 +265,7 @@ When running `claude` directly (not via `claude-by-glm`):
 
 The uninstaller will:
 - Remove PATH from shell config (optional)
-- Remove GLM model API key from keychain (macOS only)
+- Remove API key from credential storage (platform-specific)
 - Move installation directory to trash (or permanently delete if trash unavailable)
 - Prompt to edit `~/.claude.json` to remove MCP server configuration
 
@@ -220,7 +278,12 @@ The uninstaller will:
 │   ├── install-key.sh       # API key registration
 │   └── claude-by-glm        # Main launcher
 ├── config/
-│   └── claude-by-glm-update.md
+│   └── mcp.conf             # MCP server configuration (GLM_USE_MCP)
+├── credentials/
+│   ├── common.sh            # Credential abstraction layer
+│   ├── macos.sh             # macOS Keychain implementation
+│   ├── linux.sh             # Linux libsecret implementation
+│   └── windows.sh           # Windows env var implementation
 ├── scripts/
 │   ├── install.sh           # This installer
 │   └── uninstall.sh         # Uninstaller

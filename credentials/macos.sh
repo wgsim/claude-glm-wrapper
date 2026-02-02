@@ -46,14 +46,25 @@ credential_store_platform() {
         -a "$account" \
         &>/dev/null || true
 
+    # Find actual binary paths for restrictive ACLs
+    local node_path npx_path wrapper_path
+    node_path="$(command -v node 2>/dev/null || echo "")"
+    npx_path="$(command -v npx 2>/dev/null || echo "")"
+    # Use configurable install directory with fallback
+    wrapper_path="${GLM_INSTALL_DIR:-$HOME/.glm-mcp}/bin/glm-mcp-wrapper"
+
+    # Build ACL flags with actual paths (only allow specific binaries)
+    local acl_flags=()
+    [[ -n "$node_path" ]] && acl_flags+=(-T "$node_path")
+    [[ -n "$npx_path" ]] && acl_flags+=(-T "$npx_path")
+    [[ -f "$wrapper_path" ]] && acl_flags+=(-T "$wrapper_path")
+
     # Add new entry with restrictive ACLs
     security add-generic-password \
         -a "$account" \
         -s "$service" \
         -w "$password" \
-        -T "/usr/local/bin/node" \
-        -T "/opt/homebrew/bin/node" \
-        -T "/usr/bin/node" \
+        "${acl_flags[@]}" \
         -j "Stored by claude-glm-wrapper"
 
     log_info "Credential stored for service: $service"

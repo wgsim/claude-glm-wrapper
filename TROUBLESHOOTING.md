@@ -266,7 +266,7 @@ echo $PATH | grep glm-mcp
 1. Click "Always Allow" when prompted
 2. Or manually allow in Keychain Access:
    - Open Keychain Access app
-   - Find "z.ai-api-key" or "glm-coding-plan"
+   - Find "z.ai-api-key"
    - Get Info → Access Control → Add `node`, `npx`, `/bin/bash`
 
 ### Linux: No `security` Command

@@ -24,11 +24,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
-# Configuration
-KEYCHAIN_SERVICE="z.ai-api-key"
-KEYCHAIN_ACCOUNT="${USER:-$LOGNAME}"
-
-# Source credential abstraction
+# Source credential abstraction (loads security.conf)
 source "$PROJECT_DIR/credentials/common.sh"
 
 # Initialize credential backend
@@ -98,22 +94,17 @@ setup_path() {
     fi
 }
 
-# Get platform-specific credential storage name
-get_credential_storage_name() {
-    case "$CREDENTIAL_PLATFORM" in
-        macos)
-            echo "macOS Keychain"
-            ;;
-        linux)
-            echo "libsecret (secret-tool)"
-            ;;
-        windows)
-            echo "Environment variable (ZAI_API_KEY)"
-            ;;
-        *)
-            echo "credential storage"
-            ;;
-    esac
+# Load MCP configuration from file
+load_mcp_config() {
+    local config_file="$HOME/.glm-mcp/config/mcp.conf"
+
+    # Default: MCP enabled (more features)
+    export GLM_USE_MCP="${GLM_USE_MCP:-1}"
+
+    # Load config file if exists
+    if [[ -f "$config_file" ]]; then
+        source "$config_file"
+    fi
 }
 
 # Main execution
@@ -169,8 +160,15 @@ EOF
         export CLAUDE_SETTINGS="$claude_settings"
     fi
 
-    # Activate GLM mode for MCP wrapper
-    export GLM_MODE=1
+    # Load MCP configuration
+    load_mcp_config
+
+    # Activate GLM mode for MCP wrapper (only if MCP is enabled)
+    if [[ "$GLM_USE_MCP" == "1" ]]; then
+        export GLM_MODE=1
+    else
+        print_info "MCP disabled (GLM_USE_MCP=0) - running without MCP tools"
+    fi
 
     # Launch claude with all arguments
     exec claude "$@"

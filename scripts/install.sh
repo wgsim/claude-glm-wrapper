@@ -12,8 +12,11 @@
 set -euo pipefail
 
 # Configuration
-INSTALL_DIR="$HOME/.glm-mcp"
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+# Source security configuration for install directory
+source "$PROJECT_DIR/credentials/security.conf" 2>/dev/null || true
+INSTALL_DIR="${GLM_INSTALL_DIR:-$HOME/.glm-mcp}"
 
 # Colors
 RED='\033[0;31m'
@@ -288,6 +291,33 @@ prompt_api_key() {
     fi
 }
 
+# Prompt for MCP server configuration
+prompt_mcp_config() {
+    echo
+    print_step "MCP Server Configuration"
+    echo
+    echo "Enable MCP server?"
+    echo " - Yes: Use Z.ai MCP tools (environment variable exposure risk)"
+    echo " - No:  More secure, but no MCP tools"
+    echo
+    read -rp "Enable MCP server? [Y/n]: " -n 1 -r
+    echo
+
+    # Create config directory
+    mkdir -p "$INSTALL_DIR/config" 2>/dev/null || true
+
+    if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+        # MCP enabled (default)
+        echo "GLM_USE_MCP=1" > "$INSTALL_DIR/config/mcp.conf"
+        print_success "MCP server enabled"
+    else
+        # MCP disabled
+        echo "GLM_USE_MCP=0" > "$INSTALL_DIR/config/mcp.conf"
+        print_info "MCP server disabled (more secure, no environment variable exposure)"
+    fi
+    echo
+}
+
 # Print next steps
 print_next_steps() {
     local os
@@ -376,6 +406,9 @@ main() {
 
     # Prompt for API key
     prompt_api_key
+
+    # Prompt for MCP configuration
+    prompt_mcp_config
 
     # Print next steps
     print_next_steps
