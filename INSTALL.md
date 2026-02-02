@@ -61,7 +61,7 @@ cd claude-by-glm_safety_setting
 
 The installer will:
 - Verify dependencies (Node.js, npx, platform-specific tools)
-- Create directory structure at `~/.glm-mcp/`
+- Create directory structure at `~/.claude-glm-mcp/`
 - Copy executable files
 - Set appropriate permissions (500 for scripts)
 - Prompt for PATH configuration
@@ -74,7 +74,7 @@ The installer will:
 
 ```
 PATH Configuration
-INFO: Would you like to add ~/.glm-mcp/bin to your PATH?
+INFO: Would you like to add ~/.claude-glm-mcp/bin to your PATH?
 
 Options:
   1) Yes - Add to shell config (recommended)
@@ -100,10 +100,10 @@ Enable MCP server? [Y/n]:
 ```
 
 - **Yes** (default): Enables MCP server with Z.ai MCP tools
-  - Creates `~/.glm-mcp/config/mcp.conf` with `GLM_USE_MCP=1`
+  - Creates `~/.claude-glm-mcp/config/mcp.conf` with `GLM_USE_MCP=1`
   - Environment variable `ZAI_API_KEY` will be exposed to subprocesses
 - **No**: Disables MCP server for enhanced security
-  - Creates `~/.glm-mcp/config/mcp.conf` with `GLM_USE_MCP=0`
+  - Creates `~/.claude-glm-mcp/config/mcp.conf` with `GLM_USE_MCP=0`
   - No environment variable exposure
   - No MCP tools available
 
@@ -117,7 +117,7 @@ Register Z.ai API key now? (y/N):
 ```
 
 - **Yes**: Runs `install-key.sh` to store API key in platform credential storage
-- **No**: You can register later using `~/.glm-mcp/bin/install-key.sh`
+- **No**: You can register later using `~/.claude-glm-mcp/bin/install-key.sh`
 
 **Important**: The system uses a **single** Z.ai API key for:
 - Direct model API calls (via `claude-by-glm`)
@@ -132,7 +132,7 @@ Both components read from the same credential entry: `z.ai-api-key`
 The system uses a **single** Z.ai API key for both model API and MCP server.
 
 ```bash
-~/.glm-mcp/bin/install-key.sh
+~/.claude-glm-mcp/bin/install-key.sh
 ```
 
 This stores your API key with:
@@ -157,7 +157,7 @@ Edit `~/.claude.json` and add the MCP server:
   "mcpServers": {
     "glm-mcp-wrapper": {
       "type": "stdio",
-      "command": "/Users/YOUR_USERNAME/.glm-mcp/bin/glm-mcp-wrapper",
+      "command": "/Users/YOUR_USERNAME/.claude-glm-mcp/bin/glm-mcp-wrapper",
       "args": []
     }
   }
@@ -170,11 +170,11 @@ Replace `YOUR_USERNAME` with your actual username.
 
 ```bash
 # Test GLM mode activation
-GLM_MODE=1 ~/.glm-mcp/bin/glm-mcp-wrapper
+GLM_MODE=1 ~/.claude-glm-mcp/bin/glm-mcp-wrapper
 # Should connect to Z.ai MCP server (may error if API key not set)
 
 # Test claude-by-glm launcher
-~/.glm-mcp/bin/claude-by-glm --version
+~/.claude-glm-mcp/bin/claude-by-glm --version
 # Should show Claude Code version
 ```
 
@@ -186,21 +186,21 @@ If you chose not to configure PATH during installation, add this to your shell c
 
 ```bash
 # GLM MCP Wrapper
-export PATH="$HOME/.glm-mcp/bin:$PATH"
+export PATH="$HOME/.claude-glm-mcp/bin:$PATH"
 ```
 
 ### Bash (`~/.bashrc`)
 
 ```bash
 # GLM MCP Wrapper
-export PATH="$HOME/.glm-mcp/bin:$PATH"
+export PATH="$HOME/.claude-glm-mcp/bin:$PATH"
 ```
 
 ### Fish (`~/.config/fish/config.fish`)
 
 ```bash
 # GLM MCP Wrapper
-fish_add_path $HOME/.glm-mcp/bin
+fish_add_path $HOME/.claude-glm-mcp/bin
 ```
 
 Reload your shell:
@@ -218,14 +218,14 @@ source ~/.zshrc   # or ~/.bashrc for bash
 claude-by-glm [arguments]
 
 # If PATH is not configured
-~/.glm-mcp/bin/claude-by-glm [arguments]
+~/.claude-glm-mcp/bin/claude-by-glm [arguments]
 ```
 
 ### How It Works
 
 1. **`claude-by-glm`** fetches API key from credential storage (`z.ai-api-key`)
 2. Sets environment variables for Z.ai GLM models
-3. Loads MCP configuration from `~/.glm-mcp/config/mcp.conf`
+3. Loads MCP configuration from `~/.claude-glm-mcp/config/mcp.conf`
 4. If `GLM_USE_MCP=1`, sets `GLM_MODE=1` to activate MCP wrapper
 5. Launches `claude` command
 6. **MCP wrapper** detects `GLM_MODE=1`, fetches API key from credential storage, connects to Z.ai MCP server
@@ -245,22 +245,22 @@ You can enable or disable MCP server after installation:
 
 ```bash
 # Enable MCP server (with tools, has env var exposure risk)
-echo "GLM_USE_MCP=1" > ~/.glm-mcp/config/mcp.conf
+echo "GLM_USE_MCP=1" > ~/.claude-glm-mcp/config/mcp.conf
 
 # Disable MCP server (more secure, no MCP tools)
-echo "GLM_USE_MCP=0" > ~/.glm-mcp/config/mcp.conf
+echo "GLM_USE_MCP=0" > ~/.claude-glm-mcp/config/mcp.conf
 ```
 
 ### Verify Current Configuration
 
 ```bash
-cat ~/.glm-mcp/config/mcp.conf
+cat ~/.claude-glm-mcp/config/mcp.conf
 ```
 
 ## Uninstallation
 
 ```bash
-~/.glm-mcp/scripts/uninstall.sh
+~/.claude-glm-mcp/scripts/uninstall.sh
 ```
 
 The uninstaller will:
@@ -272,7 +272,7 @@ The uninstaller will:
 ## Installation Directory
 
 ```
-~/.glm-mcp/
+~/.claude-glm-mcp/
 ├── bin/
 │   ├── glm-mcp-wrapper      # MCP wrapper script
 │   ├── install-key.sh       # API key registration
@@ -296,8 +296,8 @@ The uninstaller will:
 All executable scripts have permission `500` (owner read/execute only):
 
 ```bash
-chmod 500 ~/.glm-mcp/bin/*
-chmod 500 ~/.glm-mcp/scripts/*
+chmod 500 ~/.claude-glm-mcp/bin/*
+chmod 500 ~/.claude-glm-mcp/scripts/*
 ```
 
 ## Next Steps

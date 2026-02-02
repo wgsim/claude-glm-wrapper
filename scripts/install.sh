@@ -2,11 +2,11 @@
 #
 # install.sh - Install GLM MCP wrapper system
 #
-# This script installs the GLM MCP wrapper to ~/.glm-mcp/ and
+# This script installs the GLM MCP wrapper to ~/.claude-glm-mcp/ and
 # configures PATH and shell integration based on user preferences.
 #
 # Usage:
-#   ~/.glm-mcp/scripts/install.sh
+#   ~/.claude-glm-mcp/scripts/install.sh
 #
 
 set -euo pipefail
@@ -16,7 +16,7 @@ PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # Source security configuration for install directory
 source "$PROJECT_DIR/credentials/security.conf" 2>/dev/null || true
-INSTALL_DIR="${GLM_INSTALL_DIR:-$HOME/.glm-mcp}"
+INSTALL_DIR="${GLM_INSTALL_DIR:-$HOME/.claude-glm-mcp}"
 
 # Colors
 RED='\033[0;31m'
@@ -219,7 +219,7 @@ configure_path() {
     echo
     print_step "PATH Configuration"
     echo
-    print_info "Would you like to add ~/.glm-mcp/bin to your PATH?"
+    print_info "Would you like to add ~/.claude-glm-mcp/bin to your PATH?"
     echo
     echo "This allows you to run claude-by-glm from anywhere:"
     echo "  claude-by-glm <arguments>"
@@ -243,7 +243,7 @@ configure_path() {
             if [[ -z "$shell_config" ]]; then
                 print_error "Could not determine shell config file"
                 print_info "Please manually add to your shell config:"
-                echo "  export PATH=\"\$HOME/.glm-mcp/bin:\$PATH\""
+                echo "  export PATH=\"\$HOME/.claude-glm-mcp/bin:\$PATH\""
                 return 0
             fi
 
@@ -253,19 +253,19 @@ configure_path() {
             fi
 
             # Check if PATH already contains our bin directory
-            if grep -q -F "PATH=\"\$HOME/.glm-mcp/bin:" "$shell_config" 2>/dev/null; then
+            if grep -q -F "PATH=\"\$HOME/.claude-glm-mcp/bin:" "$shell_config" 2>/dev/null; then
                 print_info "PATH already configured in $shell_config"
             else
                 echo "
-# GLM MCP Wrapper - Added by ~/.glm-mcp/scripts/install.sh
-export PATH=\"\$HOME/.glm-mcp/bin:\$PATH\"" >> "$shell_config"
+# GLM MCP Wrapper - Added by ~/.claude-glm-mcp/scripts/install.sh
+export PATH=\"\$HOME/.claude-glm-mcp/bin:\$PATH\"" >> "$shell_config"
                 print_success "PATH added to: $shell_config"
                 print_info "Run: source $shell_config"
             fi
             ;;
         2)
             print_info "Skipped. You can manually add later:"
-            echo "  export PATH=\"\$HOME/.glm-mcp/bin:\$PATH\""
+            echo "  export PATH=\"\$HOME/.claude-glm-mcp/bin:\$PATH\""
             ;;
         3)
             # Create flag to skip PATH prompts in future
@@ -287,7 +287,7 @@ prompt_api_key() {
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         "$INSTALL_DIR/bin/install-key.sh"
     else
-        print_info "You can register later using: ~/.glm-mcp/bin/install-key.sh"
+        print_info "You can register later using: ~/.claude-glm-mcp/bin/install-key.sh"
     fi
 }
 
@@ -331,7 +331,7 @@ print_next_steps() {
     echo
     echo "Next steps:"
     echo "  1. Register API key (if not done):"
-    echo "     ~/.glm-mcp/bin/install-key.sh"
+    echo "     ~/.claude-glm-mcp/bin/install-key.sh"
     echo
     echo "  2. Add to ~/.claude.json:"
     echo '     "glm-mcp-wrapper": {'
@@ -352,8 +352,8 @@ print_next_steps() {
     if [[ ":$PATH:" == *:"$INSTALL_DIR/bin":* ]]; then
         echo "     claude-by-glm <arguments>"
     else
-        echo "     ~/.glm-mcp/bin/claude-by-glm <arguments>"
-        echo "     (Or add ~/.glm-mcp/bin to your PATH)"
+        echo "     ~/.claude-glm-mcp/bin/claude-by-glm <arguments>"
+        echo "     (Or add ~/.claude-glm-mcp/bin to your PATH)"
     fi
     echo
 

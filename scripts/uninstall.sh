@@ -6,7 +6,7 @@
 # Uses platform-specific trash commands when available.
 #
 # Usage:
-#   ~/.glm-mcp/scripts/uninstall.sh
+#   ~/.claude-glm-mcp/scripts/uninstall.sh
 #
 
 set -euo pipefail
@@ -20,11 +20,11 @@ source "$PROJECT_DIR/credentials/security.conf" 2>/dev/null || {
     # Fallback if security.conf not found
     KEYCHAIN_SERVICE="z.ai-api-key"
     KEYCHAIN_ACCOUNT="${USER:-$LOGNAME}"
-    GLM_INSTALL_DIR="${HOME}/.glm-mcp"
+    GLM_INSTALL_DIR="${HOME}/.claude-glm-mcp"
 }
 
 # Use config value with fallback
-INSTALL_DIR="${GLM_INSTALL_DIR:-$HOME/.glm-mcp}"
+INSTALL_DIR="${GLM_INSTALL_DIR:-$HOME/.claude-glm-mcp}"
 
 # Colors
 RED='\033[0;31m'
@@ -186,7 +186,7 @@ remove_path_config() {
     if [[ -z "$shell_config" ]]; then
         print_info "Could not determine shell config file"
         print_info "Please manually remove PATH from your shell config:"
-        echo "  Remove line containing: ~/.glm-mcp/bin"
+        echo "  Remove line containing: ~/.claude-glm-mcp/bin"
         return 0
     fi
 
@@ -197,7 +197,7 @@ remove_path_config() {
 
     # Check if PATH contains our bin directory
     if grep -q "$INSTALL_DIR/bin" "$shell_config" 2>/dev/null; then
-        read -rp "Remove ~/.glm-mcp/bin from PATH in $shell_config? (y/N): " -n 1 -r
+        read -rp "Remove ~/.claude-glm-mcp/bin from PATH in $shell_config? (y/N): " -n 1 -r
         echo
         echo
 

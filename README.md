@@ -18,17 +18,17 @@ Use Z.ai GLM models (glm-4.5-air, glm-4.6, glm-4.7) with Claude Code while keepi
 ./scripts/install.sh
 
 # Register your Z.ai API key (single key for both purposes)
-~/.glm-mcp/bin/install-key.sh
+~/.claude-glm-mcp/bin/install-key.sh
 
 # Configure MCP (optional)
-echo "GLM_USE_MCP=1" > ~/.glm-mcp/config/mcp.conf  # Enable Z.ai MCP
+echo "GLM_USE_MCP=1" > ~/.claude-glm-mcp/config/mcp.conf  # Enable Z.ai MCP
 # OR
-echo "GLM_USE_MCP=0" > ~/.glm-mcp/config/mcp.conf  # Disable (more secure)
+echo "GLM_USE_MCP=0" > ~/.claude-glm-mcp/config/mcp.conf  # Disable (more secure)
 
 # Add to ~/.claude.json
 # "glm-mcp-wrapper": {
 #   "type": "stdio",
-#   "command": "/Users/YOUR_USERNAME/.glm-mcp/bin/glm-mcp-wrapper",
+#   "command": "/Users/YOUR_USERNAME/.claude-glm-mcp/bin/glm-mcp-wrapper",
 #   "args": []
 # }
 
@@ -57,7 +57,7 @@ Z.ai MCP Server
 ## Installation Directory
 
 ```
-~/.glm-mcp/
+~/.claude-glm-mcp/
 ├── bin/
 │   ├── glm-mcp-wrapper      # MCP wrapper (GLM_MODE aware)
 │   ├── install-key.sh       # API key registration
@@ -90,10 +90,10 @@ The Z.ai MCP server can be enabled or disabled via configuration:
 
 ```bash
 # Enable Z.ai MCP (default, has tools)
-echo "GLM_USE_MCP=1" > ~/.glm-mcp/config/mcp.conf
+echo "GLM_USE_MCP=1" > ~/.claude-glm-mcp/config/mcp.conf
 
 # Disable Z.ai MCP (more secure, no tools)
-echo "GLM_USE_MCP=0" > ~/.glm-mcp/config/mcp.conf
+echo "GLM_USE_MCP=0" > ~/.claude-glm-mcp/config/mcp.conf
 ```
 
 **Security Note**: When MCP is enabled, the API key is briefly exposed as an environment variable to the Z.ai MCP server. The wrapper minimizes this exposure with `unset` and `ulimit -c 0`, but there's a small window where the key could be accessed via `ps` or `/proc`. Disable MCP if you need maximum security.

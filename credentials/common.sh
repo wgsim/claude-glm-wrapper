@@ -35,7 +35,7 @@ load_security_config() {
     KEYCHAIN_SERVICE="${KEYCHAIN_SERVICE:-z.ai-api-key}"
     KEYCHAIN_ACCOUNT="${KEYCHAIN_ACCOUNT:-${USER:-${LOGNAME}}}"
     GLM_USE_MCP="${GLM_USE_MCP:-1}"
-    GLM_INSTALL_DIR="${GLM_INSTALL_DIR:-${HOME}/.glm-mcp}"
+    GLM_INSTALL_DIR="${GLM_INSTALL_DIR:-${HOME}/.claude-glm-mcp}"
 }
 
 # Load configuration

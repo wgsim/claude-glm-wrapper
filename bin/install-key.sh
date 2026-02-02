@@ -10,7 +10,7 @@
 # The API key is never written to any file.
 #
 # Usage:
-#   ~/.glm-mcp/bin/install-key.sh
+#   ~/.claude-glm-mcp/bin/install-key.sh
 #
 
 set -euo pipefail

@@ -51,7 +51,7 @@ credential_store_platform() {
     node_path="$(command -v node 2>/dev/null || echo "")"
     npx_path="$(command -v npx 2>/dev/null || echo "")"
     # Use configurable install directory with fallback
-    wrapper_path="${GLM_INSTALL_DIR:-$HOME/.glm-mcp}/bin/glm-mcp-wrapper"
+    wrapper_path="${GLM_INSTALL_DIR:-$HOME/.claude-glm-mcp}/bin/glm-mcp-wrapper"
 
     # Build ACL flags with actual paths (only allow specific binaries)
     local acl_flags=()

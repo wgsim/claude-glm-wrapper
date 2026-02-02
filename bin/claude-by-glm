@@ -81,8 +81,8 @@ setup_path() {
         return 0
     fi
 
-    # Add ~/.glm-mcp/bin to PATH if not already there
-    local glm_bin="$HOME/.glm-mcp/bin"
+    # Add ~/.claude-glm-mcp/bin to PATH if not already there
+    local glm_bin="$HOME/.claude-glm-mcp/bin"
     if [[ -d "$glm_bin" ]]; then
         case ":$PATH:" in
             *:"$glm_bin":*) ;;
@@ -130,7 +130,7 @@ ERROR: Failed to retrieve Z.ai API key from $(get_credential_storage_name).
 Required: service="$KEYCHAIN_SERVICE", account="$KEYCHAIN_ACCOUNT"
 
 Please register your API key first:
-  ~/.glm-mcp/bin/install-key.sh
+  ~/.claude-glm-mcp/bin/install-key.sh
 
 Or get one from: https://z.ai/subscribe?ic=EBGYZCJRYJ
 EOF

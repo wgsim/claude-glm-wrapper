@@ -9,7 +9,7 @@ cd /path/to/claude-by-glm_safety_setting
 ./scripts/install.sh
 ```
 
-This will install a complete system including `~/.glm-mcp/bin/claude-by-glm`.
+This will install a complete system including `~/.claude-glm-mcp/bin/claude-by-glm`.
 
 ---
 
@@ -62,5 +62,5 @@ security find-generic-password -s "z.ai-api-key" -a "$USER" -w
 secret-tool lookup "glm-wrapper-service" "z.ai-api-key" "glm-wrapper-account" "$USER"
 
 # Test the wrapper directly
-GLM_MODE=1 ~/.glm-mcp/bin/glm-mcp-wrapper
+GLM_MODE=1 ~/.claude-glm-mcp/bin/glm-mcp-wrapper
 ```

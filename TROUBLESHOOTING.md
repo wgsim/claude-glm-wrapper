@@ -42,8 +42,8 @@ npx --version
 
 **Solution**:
 ```bash
-chmod +x ~/.glm-mcp/bin/*
-chmod +x ~/.glm-mcp/scripts/*
+chmod +x ~/.claude-glm-mcp/bin/*
+chmod +x ~/.claude-glm-mcp/scripts/*
 ```
 
 ### Install Script Fails at Dependency Check
@@ -73,7 +73,7 @@ brew install node  # macOS
 security find-generic-password -s "z.ai-api-key" -a "$USER" -w
 
 # If not found, register it
-~/.glm-mcp/bin/install-key.sh
+~/.claude-glm-mcp/bin/install-key.sh
 ```
 
 ### "security: SecKeychainItemCopyGenericPassword: The specified item could not be found in the keychain"
@@ -83,7 +83,7 @@ security find-generic-password -s "z.ai-api-key" -a "$USER" -w
 **Solution**:
 ```bash
 # Register your Z.ai API key
-~/.glm-mcp/bin/install-key.sh
+~/.claude-glm-mcp/bin/install-key.sh
 ```
 
 **Note**: This system uses a single `z.ai-api-key` entry for both model API and MCP server.
@@ -96,7 +96,7 @@ security find-generic-password -s "z.ai-api-key" -a "$USER" -w
 ```bash
 # Delete and re-register
 security delete-generic-password -s "z.ai-api-key" -a "$USER"
-~/.glm-mcp/bin/install-key.sh
+~/.claude-glm-mcp/bin/install-key.sh
 ```
 
 ## MCP Wrapper Issues
@@ -111,7 +111,7 @@ security delete-generic-password -s "z.ai-api-key" -a "$USER"
 echo $GLM_MODE
 
 # Test wrapper directly
-GLM_MODE=1 ~/.glm-mcp/bin/glm-mcp-wrapper
+GLM_MODE=1 ~/.claude-glm-mcp/bin/glm-mcp-wrapper
 
 # Should show MCP server output, not "sleep infinity"
 ```
@@ -128,12 +128,12 @@ cat ~/.claude.json | grep -A 5 glm-mcp-wrapper
 # Should show:
 # "glm-mcp-wrapper": {
 #   "type": "stdio",
-#   "command": "/Users/YOUR_USERNAME/.glm-mcp/bin/glm-mcp-wrapper",
+#   "command": "/Users/YOUR_USERNAME/.claude-glm-mcp/bin/glm-mcp-wrapper",
 #   "args": []
 # }
 
 # Verify GLM_MODE is set by claude-by-glm
-grep GLM_MODE ~/.glm-mcp/bin/claude-by-glm
+grep GLM_MODE ~/.claude-glm-mcp/bin/claude-by-glm
 ```
 
 ### Wrapper Path Incorrect in .claude.json
@@ -171,10 +171,10 @@ which claude
 **Solution**:
 ```bash
 # Use full path
-~/.glm-mcp/bin/claude-by-glm
+~/.claude-glm-mcp/bin/claude-by-glm
 
 # Or add to PATH (see INSTALL.md)
-export PATH="$HOME/.glm-mcp/bin:$PATH"
+export PATH="$HOME/.claude-glm-mcp/bin:$PATH"
 ```
 
 ### Wrong Models Being Used
@@ -184,7 +184,7 @@ export PATH="$HOME/.glm-mcp/bin:$PATH"
 **Solution**:
 ```bash
 # Check environment variables in claude-by-glm
-grep ANTHROPIC ~/.glm-mcp/bin/claude-by-glm
+grep ANTHROPIC ~/.claude-glm-mcp/bin/claude-by-glm
 
 # Should show:
 # ANTHROPIC_BASE_URL="https://api.z.ai/api/anthropic"
@@ -203,7 +203,7 @@ grep ANTHROPIC ~/.glm-mcp/bin/claude-by-glm
 security find-generic-password -s "z.ai-api-key" -a "$USER" -w
 
 # If not found, register it
-~/.glm-mcp/bin/install-key.sh
+~/.claude-glm-mcp/bin/install-key.sh
 ```
 
 ## Configuration Issues
@@ -300,12 +300,12 @@ setx ZAI_API_KEY "your_key_here"
 
 ```bash
 # Check all files exist
-ls -la ~/.glm-mcp/bin/
-ls -la ~/.glm-mcp/scripts/
+ls -la ~/.claude-glm-mcp/bin/
+ls -la ~/.claude-glm-mcp/scripts/
 
 # Check permissions
-stat -f "%Lp %N" ~/.glm-mcp/bin/*  # macOS
-stat -c "%a %n" ~/.glm-mcp/bin/*   # Linux
+stat -f "%Lp %N" ~/.claude-glm-mcp/bin/*  # macOS
+stat -c "%a %n" ~/.claude-glm-mcp/bin/*   # Linux
 
 # Check keychain entry (single key for both purposes)
 security find-generic-password -s "z.ai-api-key" -a "$USER" -w
@@ -321,14 +321,14 @@ echo $PATH | tr ':' '\n' | grep glm
 
 ```bash
 # Test with GLM_MODE enabled
-GLM_MODE=1 ~/.glm-mcp/bin/glm-mcp-wrapper
+GLM_MODE=1 ~/.claude-glm-mcp/bin/glm-mcp-wrapper
 
 # Test with GLM_MODE disabled (should sleep)
-~/.glm-mcp/bin/glm-mcp-wrapper
+~/.claude-glm-mcp/bin/glm-mcp-wrapper
 
 # Check for syntax errors
-bash -n ~/.glm-mcp/bin/glm-mcp-wrapper
-bash -n ~/.glm-mcp/bin/claude-by-glm
+bash -n ~/.claude-glm-mcp/bin/glm-mcp-wrapper
+bash -n ~/.claude-glm-mcp/bin/claude-by-glm
 ```
 
 ### Enable Debug Output
@@ -351,7 +351,7 @@ If issues persist:
 1. Check error messages carefully
 2. Run debug commands above
 3. Verify all prerequisites are installed
-4. Try reinstalling: `~/.glm-mcp/scripts/uninstall.sh` then `./scripts/install.sh`
+4. Try reinstalling: `~/.claude-glm-mcp/scripts/uninstall.sh` then `./scripts/install.sh`
 5. Check GitHub Issues for similar problems
 6. Create new issue with:
    - macOS/Linux version
