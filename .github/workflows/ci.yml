@@ -1,0 +1,84 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check bash syntax
+        run: |
+          echo "Checking bash syntax..."
+          find . -name "*.sh" -type f -exec bash -n {} \; && echo "All bash scripts syntax valid"
+
+      - name: Validate security.conf
+        run: |
+          if [ -f "credentials/security.conf" ]; then
+            echo "security.conf exists"
+            grep -q "KEYCHAIN_SERVICE" credentials/security.conf
+            grep -q "KEYCHAIN_ACCOUNT" credentials/security.conf
+            grep -q "GLM_USE_MCP" credentials/security.conf
+            grep -q "GLM_INSTALL_DIR" credentials/security.conf
+            echo "All required config variables present"
+          else
+            echo "ERROR: security.conf not found"
+            exit 1
+          fi
+
+      - name: Validate VERSION
+        run: |
+          if [ -f "VERSION" ]; then
+            VERSION=$(cat VERSION)
+            echo "Current version: $VERSION"
+            if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "ERROR: Invalid version format: $VERSION"
+              exit 1
+            fi
+            echo "VERSION format valid"
+          else
+            echo "ERROR: VERSION file not found"
+            exit 1
+          fi
+
+      - name: Security checks
+        run: |
+          echo "Running security checks..."
+          if grep -r "sk-[a-zA-Z0-9]\{48\}" . --include="*.sh" --include="*.md" 2>/dev/null; then
+            echo "ERROR: Possible hardcoded API key found"
+            exit 1
+          fi
+          echo "No hardcoded API keys found"
+
+  verify-consistency:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Verify service name
+        run: |
+          SERVICE_NAME="z.ai-api-key"
+          if ! grep -q "$SERVICE_NAME" credentials/security.conf; then
+            echo "ERROR: Service name not found in security.conf"
+            exit 1
+          fi
+          if grep -r "glm-coding-plan" . --include="*.sh" --include="*.conf" 2>/dev/null; then
+            echo "ERROR: Old service name still exists"
+            exit 1
+          fi
+          echo "Service name is consistent: $SERVICE_NAME"
+
+      - name: Verify install directory
+        run: |
+          if grep -r "\.glm-mcp" . --include="*.sh" --include="*.md" --include="*.conf" 2>/dev/null; then
+            echo "ERROR: Old directory name still exists"
+            exit 1
+          fi
+          echo "Install directory is consistent: .claude-glm-mcp"

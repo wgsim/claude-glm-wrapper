@@ -97,7 +97,3 @@ echo "GLM_USE_MCP=0" > ~/.claude-glm-mcp/config/mcp.conf
 ```
 
 **Security Note**: When MCP is enabled, the API key is briefly exposed as an environment variable to the Z.ai MCP server. The wrapper minimizes this exposure with `unset` and `ulimit -c 0`, but there's a small window where the key could be accessed via `ps` or `/proc`. Disable MCP if you need maximum security.
-
-## License
-
-MIT
