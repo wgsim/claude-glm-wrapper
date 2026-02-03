@@ -40,11 +40,7 @@ credential_store_platform() {
     local account="$2"
     local password="$3"
 
-    # Delete existing entry first (try with account, then service-only)
-    security delete-generic-password \
-        -s "$service" \
-        -a "$account" \
-        &>/dev/null || \
+    # Delete existing entry first (service-only lookup to handle account prefixes)
     security delete-generic-password \
         -s "$service" \
         &>/dev/null || true
@@ -63,6 +59,8 @@ credential_store_platform() {
     [[ -f "$wrapper_path" ]] && acl_flags+=(-T "$wrapper_path")
 
     # Add new entry with restrictive ACLs
+    # Note: -a "$account" may be modified by macOS on org-managed devices
+    # We use service-only lookup for retrieval to handle this
     security add-generic-password \
         -a "$account" \
         -s "$service" \
@@ -76,21 +74,12 @@ credential_store_platform() {
 # Fetch credential from keychain
 credential_fetch_platform() {
     local service="$1"
-    local account="$2"
+    local account="$2"  # Unused in lookup, but kept for interface consistency
 
     local password
 
-    # Try with account first (standard case)
-    password="$(security find-generic-password \
-        -s "$service" \
-        -a "$account" \
-        -w 2>/dev/null)" && [[ -n "$password" ]] && {
-        echo "$password"
-        return 0
-    }
-
-    # Fallback: query by service only (handles account name prefixes like "Domain\user")
-    # macOS Keychain may add organization prefixes to account names
+    # Use service-only lookup to handle account name prefixes
+    # macOS Keychain may modify account names on org-managed devices (e.g., "Domain\user")
     password="$(security find-generic-password \
         -s "$service" \
         -w 2>/dev/null)" || return 1
@@ -106,22 +95,13 @@ credential_fetch_platform() {
 # Delete credential from keychain
 credential_delete_platform() {
     local service="$1"
-    local account="$2"
+    local account="$2"  # Unused in lookup, but kept for interface consistency
 
-    # Try with account first (standard case)
+    # Use service-only lookup to handle account name prefixes
     if security delete-generic-password \
         -s "$service" \
-        -a "$account" \
         &>/dev/null; then
         log_info "Credential deleted for service: $service"
-        return 0
-    fi
-
-    # Fallback: delete by service only (handles account name prefixes)
-    if security delete-generic-password \
-        -s "$service" \
-        &>/dev/null; then
-        log_info "Credential deleted for service: $service (service-only lookup)"
         return 0
     fi
 
