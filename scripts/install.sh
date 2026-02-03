@@ -201,16 +201,16 @@ copy_files() {
     chmod +x "$PROJECT_DIR/scripts/uninstall.sh"
 
     # Copy to install directory
-    cp "$PROJECT_DIR/bin/glm-mcp-wrapper" "$INSTALL_DIR/bin/"
-    cp "$PROJECT_DIR/bin/install-key.sh" "$INSTALL_DIR/bin/"
-    cp "$PROJECT_DIR/bin/claude-by-glm" "$INSTALL_DIR/bin/"
-    cp "$PROJECT_DIR/credentials/common.sh" "$INSTALL_DIR/credentials/"
-    cp "$PROJECT_DIR/credentials/macos.sh" "$INSTALL_DIR/credentials/"
-    cp "$PROJECT_DIR/credentials/linux.sh" "$INSTALL_DIR/credentials/"
-    cp "$PROJECT_DIR/credentials/windows.sh" "$INSTALL_DIR/credentials/"
-    cp "$PROJECT_DIR/credentials/security.conf" "$INSTALL_DIR/credentials/"
-    cp "$PROJECT_DIR/scripts/install.sh" "$INSTALL_DIR/scripts/"
-    cp "$PROJECT_DIR/scripts/uninstall.sh" "$INSTALL_DIR/scripts/"
+    cp -f "$PROJECT_DIR/bin/glm-mcp-wrapper" "$INSTALL_DIR/bin/"
+    cp -f "$PROJECT_DIR/bin/install-key.sh" "$INSTALL_DIR/bin/"
+    cp -f "$PROJECT_DIR/bin/claude-by-glm" "$INSTALL_DIR/bin/"
+    cp -f "$PROJECT_DIR/credentials/common.sh" "$INSTALL_DIR/credentials/"
+    cp -f "$PROJECT_DIR/credentials/macos.sh" "$INSTALL_DIR/credentials/"
+    cp -f "$PROJECT_DIR/credentials/linux.sh" "$INSTALL_DIR/credentials/"
+    cp -f "$PROJECT_DIR/credentials/windows.sh" "$INSTALL_DIR/credentials/"
+    cp -f "$PROJECT_DIR/credentials/security.conf" "$INSTALL_DIR/credentials/"
+    cp -f "$PROJECT_DIR/scripts/install.sh" "$INSTALL_DIR/scripts/"
+    cp -f "$PROJECT_DIR/scripts/uninstall.sh" "$INSTALL_DIR/scripts/"
 
     print_success "Files copied to $INSTALL_DIR"
 }
@@ -412,6 +412,47 @@ print_next_steps() {
 main() {
     echo "=== GLM MCP Wrapper Installation ==="
     echo
+
+    # Check for existing installation
+    if [[ -d "$INSTALL_DIR" ]]; then
+        print_warning "Existing installation found at: $INSTALL_DIR"
+        echo
+        echo "Options:"
+        echo "  1) Uninstall first, then reinstall (recommended)"
+        echo "  2) Overwrite existing files"
+        echo "  3) Cancel"
+        echo
+        read -rp "Choose [1/2/3]: " -n 1 -r
+        echo
+        echo
+
+        case "$REPLY" in
+            1)
+                print_step "Running uninstall..."
+                if [[ -f "$INSTALL_DIR/scripts/uninstall.sh" ]]; then
+                    "$INSTALL_DIR/scripts/uninstall.sh"
+                else
+                    print_warning "Uninstall script not found, removing directory..."
+                    rm -rf "$INSTALL_DIR"
+                fi
+                ;;
+            2)
+                print_info "Will overwrite existing installation"
+                # Remove restrictive files that might cause issues
+                rm -f "$INSTALL_DIR/bin/"* 2>/dev/null || true
+                rm -f "$INSTALL_DIR/credentials/"* 2>/dev/null || true
+                rm -f "$INSTALL_DIR/scripts/"* 2>/dev/null || true
+                ;;
+            3)
+                print_info "Installation cancelled"
+                exit 0
+                ;;
+            *)
+                print_info "Installation cancelled"
+                exit 0
+                ;;
+        esac
+    fi
 
     # Verify dependencies
     if ! verify_dependencies; then
