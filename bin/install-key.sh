@@ -55,9 +55,6 @@ print_warning() {
 validate_api_key() {
     local key="$1"
 
-    # Sanitize input: remove newlines and control characters
-    key=$(echo "$key" | tr -d '\n\r' | tr -cd '[:print:]')
-
     # Basic validation: not empty, reasonable length, allowed characters
     if [[ -z "$key" ]]; then
         print_error "API key cannot be empty"

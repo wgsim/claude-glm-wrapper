@@ -40,6 +40,12 @@ credential_store_platform() {
     local account="$2"
     local password="$3"
 
+    # Validate password is not empty
+    if [[ -z "$password" ]]; then
+        log_error "Cannot store empty password"
+        return 1
+    fi
+
     # Delete existing entry first (service-only lookup to handle account prefixes)
     security delete-generic-password \
         -s "$service" \
@@ -57,14 +63,21 @@ credential_store_platform() {
     # Add new entry with explicit type and minimal ACLs
     # Note: -a "$account" may be modified by macOS on org-managed devices
     # We use service-only lookup for retrieval to handle this
-    security add-generic-password \
+    local output
+    output=$(security add-generic-password \
         -a "$account" \
         -s "$service" \
         -w "$password" \
         -t "genp" \
         -D "GLM API Key" \
         "${acl_flags[@]:-}" \
-        -j "Stored by claude-glm-wrapper"
+        -j "Stored by claude-glm-wrapper" 2>&1)
+
+    # Check if command succeeded (security may return 0 even on failure)
+    if [[ "$output" == *"Usage:"* ]] || [[ "$output" == *"error:"* ]]; then
+        log_error "Failed to store credential: $output"
+        return 1
+    fi
 
     log_info "Credential stored for service: $service"
 }
