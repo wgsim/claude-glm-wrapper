@@ -98,8 +98,8 @@ get_shell_config() {
     local shell="$1"
     case "$shell" in
         zsh)
-            if [[ -n "$ZDOTDIR" ]]; then
-                echo "$ZDOTDIR/.zshrc"
+            if [[ -n "${ZDOTDIR:-}" ]]; then
+                echo "${ZDOTDIR}/.zshrc"
             else
                 echo "$HOME/.zshrc"
             fi
