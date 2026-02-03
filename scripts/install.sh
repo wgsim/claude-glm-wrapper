@@ -57,15 +57,37 @@ detect_os() {
 
 # Detect current shell
 detect_shell() {
+    # First check current shell version variables
     if [[ -n "${ZSH_VERSION:-}" ]]; then
         echo "zsh"
+        return
     elif [[ -n "${BASH_VERSION:-}" ]]; then
         echo "bash"
+        return
     elif [[ -n "${FISH_VERSION:-}" ]]; then
         echo "fish"
-    else
-        echo "unknown"
+        return
     fi
+
+    # Fallback: check $SHELL (user's default shell)
+    if [[ -n "${SHELL:-}" ]]; then
+        case "$SHELL" in
+            */zsh)
+                echo "zsh"
+                return
+                ;;
+            */bash)
+                echo "bash"
+                return
+                ;;
+            */fish)
+                echo "fish"
+                return
+                ;;
+        esac
+    fi
+
+    echo "unknown"
 }
 
 # Get shell config file
@@ -161,6 +183,7 @@ create_directories() {
 
     mkdir -p "$INSTALL_DIR/bin"
     mkdir -p "$INSTALL_DIR/config"
+    mkdir -p "$INSTALL_DIR/credentials"
     mkdir -p "$INSTALL_DIR/scripts"
 
     print_success "Directories created: $INSTALL_DIR"
@@ -181,6 +204,11 @@ copy_files() {
     cp "$PROJECT_DIR/bin/glm-mcp-wrapper" "$INSTALL_DIR/bin/"
     cp "$PROJECT_DIR/bin/install-key.sh" "$INSTALL_DIR/bin/"
     cp "$PROJECT_DIR/bin/claude-by-glm" "$INSTALL_DIR/bin/"
+    cp "$PROJECT_DIR/credentials/common.sh" "$INSTALL_DIR/credentials/"
+    cp "$PROJECT_DIR/credentials/macos.sh" "$INSTALL_DIR/credentials/"
+    cp "$PROJECT_DIR/credentials/linux.sh" "$INSTALL_DIR/credentials/"
+    cp "$PROJECT_DIR/credentials/windows.sh" "$INSTALL_DIR/credentials/"
+    cp "$PROJECT_DIR/credentials/security.conf" "$INSTALL_DIR/credentials/"
     cp "$PROJECT_DIR/scripts/install.sh" "$INSTALL_DIR/scripts/"
     cp "$PROJECT_DIR/scripts/uninstall.sh" "$INSTALL_DIR/scripts/"
 
@@ -195,6 +223,11 @@ set_permissions() {
     chmod 500 "$INSTALL_DIR/bin/glm-mcp-wrapper"
     chmod 500 "$INSTALL_DIR/bin/install-key.sh"
     chmod 500 "$INSTALL_DIR/bin/claude-by-glm"
+    chmod 600 "$INSTALL_DIR/credentials/common.sh"
+    chmod 600 "$INSTALL_DIR/credentials/macos.sh"
+    chmod 600 "$INSTALL_DIR/credentials/linux.sh"
+    chmod 600 "$INSTALL_DIR/credentials/windows.sh"
+    chmod 600 "$INSTALL_DIR/credentials/security.conf"
     chmod 500 "$INSTALL_DIR/scripts/install.sh"
     chmod 500 "$INSTALL_DIR/scripts/uninstall.sh"
 

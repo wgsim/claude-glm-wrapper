@@ -68,7 +68,8 @@ Z.ai MCP Server
 │   ├── common.sh            # Credential abstraction layer
 │   ├── macos.sh             # macOS Keychain
 │   ├── linux.sh             # Linux libsecret
-│   └── windows.sh           # Windows env var
+│   ├── windows.sh           # Windows env var
+│   └── security.conf         # Centralized configuration
 ├── scripts/
 │   ├── install.sh           # Installer
 │   └── uninstall.sh         # Uninstaller

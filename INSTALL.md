@@ -283,7 +283,8 @@ The uninstaller will:
 │   ├── common.sh            # Credential abstraction layer
 │   ├── macos.sh             # macOS Keychain implementation
 │   ├── linux.sh             # Linux libsecret implementation
-│   └── windows.sh           # Windows env var implementation
+│   ├── windows.sh           # Windows env var implementation
+│   └── security.conf         # Centralized security configuration
 ├── scripts/
 │   ├── install.sh           # This installer
 │   └── uninstall.sh         # Uninstaller
@@ -294,10 +295,12 @@ The uninstaller will:
 ## File Permissions
 
 All executable scripts have permission `500` (owner read/execute only):
+All credential scripts have permission `600` (owner read/write only):
 
 ```bash
 chmod 500 ~/.claude-glm-mcp/bin/*
 chmod 500 ~/.claude-glm-mcp/scripts/*
+chmod 600 ~/.claude-glm-mcp/credentials/*
 ```
 
 ## Next Steps
