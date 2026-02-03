@@ -84,38 +84,6 @@ validate_api_key() {
     return 0
 }
 
-# Check if key already exists
-check_existing_key() {
-    if credential_fetch "$KEYCHAIN_SERVICE" "$KEYCHAIN_ACCOUNT" &>/dev/null; then
-        return 0
-    fi
-    return 1
-}
-
-# Store API key
-store_api_key() {
-    local api_key="$1"
-
-    # Check if key already exists
-    if check_existing_key; then
-        print_info "API key already exists in credential storage"
-        read -rp "Overwrite? (y/N): " -n 1 response
-        echo
-        if [[ ! $response =~ ^[Yy]$ ]]; then
-            print_info "Keeping existing API key"
-            return 0
-        fi
-
-        # Delete existing key first
-        credential_delete "$KEYCHAIN_SERVICE" "$KEYCHAIN_ACCOUNT"
-    fi
-
-    # Store new key
-    credential_store "$KEYCHAIN_SERVICE" "$KEYCHAIN_ACCOUNT" "$api_key"
-
-    print_success "API key saved to credential storage"
-}
-
 # Main execution
 main() {
     # Initialize credential backend
@@ -124,8 +92,6 @@ main() {
     echo "=== Z.ai API Key Registration ==="
     echo
     echo "This will store your Z.ai API key in $(get_credential_storage_name)."
-    echo "Service: $KEYCHAIN_SERVICE"
-    echo "Account: $KEYCHAIN_ACCOUNT"
     echo "Platform: $CREDENTIAL_PLATFORM"
     echo
 
@@ -140,6 +106,14 @@ main() {
         return 0
     fi
 
+    # Prompt for account name (with default)
+    echo "Account name for credential storage:"
+    echo "  Service: $KEYCHAIN_SERVICE"
+    read -rp "  Account [$KEYCHAIN_ACCOUNT]: " input_account
+    echo
+    # Use input if provided, otherwise use default
+    local account="${input_account:-$KEYCHAIN_ACCOUNT}"
+
     # Prompt for API key
     read -rp "Enter your Z.ai API key: " -s api_key
     echo
@@ -150,20 +124,37 @@ main() {
         exit 1
     fi
 
+    # Check if key already exists and prompt for overwrite
+    if credential_fetch "$KEYCHAIN_SERVICE" "$account" &>/dev/null; then
+        print_info "API key already exists for account: $account"
+        read -rp "Overwrite? (y/N): " -n 1 response
+        echo
+        if [[ ! $response =~ ^[Yy]$ ]]; then
+            print_info "Keeping existing API key"
+            return 0
+        fi
+        # Delete existing key first
+        credential_delete "$KEYCHAIN_SERVICE" "$account"
+    fi
+
     # Store in credential storage
-    if ! store_api_key "$api_key"; then
+    if ! credential_store "$KEYCHAIN_SERVICE" "$account" "$api_key"; then
         print_error "Failed to store API key"
         exit 1
     fi
 
     echo
+    print_success "API key saved to credential storage"
+    print_success "  Service: $KEYCHAIN_SERVICE"
+    print_success "  Account: $account"
+    echo
     print_success "Setup complete! You can now use claude-by-glm."
     echo
     print_info "To verify, run:"
     if [[ "$CREDENTIAL_PLATFORM" == "macos" ]]; then
-        echo "  security find-generic-password -s $KEYCHAIN_SERVICE -a $KEYCHAIN_ACCOUNT -w"
+        echo "  security find-generic-password -s $KEYCHAIN_SERVICE -w"
     elif [[ "$CREDENTIAL_PLATFORM" == "linux" ]]; then
-        echo "  secret-tool lookup glm-wrapper-service $KEYCHAIN_SERVICE glm-wrapper-account $KEYCHAIN_ACCOUNT"
+        echo "  secret-tool lookup glm-wrapper-service $KEYCHAIN_SERVICE glm-wrapper-account $account"
     fi
 }
 
