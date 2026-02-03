@@ -51,11 +51,44 @@ print_warning() {
     echo -e "${YELLOW}WARNING:${NC} $*"
 }
 
+# Validate account name format
+validate_account_name() {
+    local account="$1"
+
+    # Not empty
+    if [[ -z "$account" ]]; then
+        print_error "Account name cannot be empty"
+        return 1
+    fi
+
+    # Length check (reasonable limits)
+    if [[ ${#account} -gt 64 ]]; then
+        print_error "Account name too long (maximum 64 characters)"
+        return 1
+    fi
+
+    # Allow only safe characters: alphanumeric, underscore, hyphen, dot
+    # Block dangerous patterns: path traversal, shell metacharacters
+    if [[ ! "$account" =~ ^[a-zA-Z0-9._-]+$ ]]; then
+        print_error "Account name contains invalid characters"
+        print_info "Allowed: alphanumeric, underscore, hyphen, dot"
+        return 1
+    fi
+
+    # Block path traversal patterns
+    if [[ "$account" =~ \.\. ]] || [[ "$account" =~ \/ ]] || [[ "$account" =~ \\ ]]; then
+        print_error "Account name contains dangerous patterns"
+        return 1
+    fi
+
+    return 0
+}
+
 # Validate API key format
 validate_api_key() {
     local key="$1"
 
-    # Basic validation: not empty, reasonable length, allowed characters
+    # Basic validation: not empty, reasonable length
     if [[ -z "$key" ]]; then
         print_error "API key cannot be empty"
         return 1
@@ -71,10 +104,11 @@ validate_api_key() {
         return 1
     fi
 
-    # Check for allowed characters (alphanumeric, underscore, hyphen, dot)
-    if [[ ! "$key" =~ ^[a-zA-Z0-9._-]+$ ]]; then
+    # Exclude only dangerous characters: whitespace, quotes, backticks, shell metacharacters
+    # Allow: alphanumeric, underscore, hyphen, dot, plus, slash, equals (common API key chars)
+    if [[ "$key" =~ [[:space:]] ]] || [[ "$key" =~ [\"\'\`\|\<\>\&\$\\\(] ]]; then
         print_error "API key contains invalid characters"
-        print_info "Allowed: alphanumeric, underscore, hyphen, dot"
+        print_info "Excluded: whitespace, quotes, backticks, shell metacharacters"
         return 1
     fi
 
@@ -103,7 +137,7 @@ main() {
         return 0
     fi
 
-    # Prompt for account name (with default, validate not empty)
+    # Prompt for account name (with default, validate)
     local account=""
     while [[ -z "$account" ]]; do
         echo "Account name for credential storage:"
@@ -112,8 +146,10 @@ main() {
         echo
         # Use input if provided, otherwise use default
         account="${input_account:-$KEYCHAIN_ACCOUNT}"
-        if [[ -z "$account" ]]; then
-            print_warning "Account name cannot be empty. Please try again."
+
+        # Validate account name
+        if ! validate_account_name "$account"; then
+            account=""  # Reset to prompt again
             echo
         fi
     done

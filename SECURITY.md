@@ -92,9 +92,30 @@ Both `claude-by-glm` and `glm-mcp-wrapper` use the same API key from keychain.
 | Issue | Impact | Mitigation |
 |-------|--------|------------|
 | macOS only | Keychain integration requires macOS | Linux/Windows need alternative storage |
-| Environment variable exposure | API key visible via `ps eww` | Use only on trusted systems |
+| **Environment variable exposure** | **API key visible to child processes** | **See below for details** |
 | No rate limiting | Keychain access not throttled | Protect keychain password |
 | No audit logging | Keychain access not logged | Review keychain access manually |
+
+### Environment Variable Exposure Risk
+
+When MCP is enabled (`GLM_USE_MCP=1`), the API key is temporarily exported as an environment variable (`ZAI_API_KEY`) to pass it to the Z.ai MCP server.
+
+**Risks:**
+- The API key is visible to all child processes during the MCP server's lifetime
+- On Linux, the key can be read from `/proc/[pid]/environ` by processes with the same UID
+- The key may appear in process listings with `ps eww` or similar tools
+- Core dumps could contain the key (mitigated by `ulimit -c 0`)
+
+**Mitigations:**
+- The wrapper minimizes exposure time by immediately `exec`ing the MCP server
+- Core dumps are prevented via `ulimit -c 0`
+- The key is never logged or written to files
+
+**Recommendations:**
+1. Disable MCP if you don't need MCP tools (`GLM_USE_MCP=0`)
+2. Run on trusted systems only
+3. Use a dedicated API key with minimal permissions
+4. Consider using alternative credential methods for high-security environments
 
 ## Reporting Vulnerabilities
 
