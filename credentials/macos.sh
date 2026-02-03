@@ -40,10 +40,13 @@ credential_store_platform() {
     local account="$2"
     local password="$3"
 
-    # Delete existing entry first (ignore errors)
+    # Delete existing entry first (try with account, then service-only)
     security delete-generic-password \
         -s "$service" \
         -a "$account" \
+        &>/dev/null || \
+    security delete-generic-password \
+        -s "$service" \
         &>/dev/null || true
 
     # Find actual binary paths for restrictive ACLs
@@ -76,9 +79,20 @@ credential_fetch_platform() {
     local account="$2"
 
     local password
+
+    # Try with account first (standard case)
     password="$(security find-generic-password \
         -s "$service" \
         -a "$account" \
+        -w 2>/dev/null)" && [[ -n "$password" ]] && {
+        echo "$password"
+        return 0
+    }
+
+    # Fallback: query by service only (handles account name prefixes like "Domain\user")
+    # macOS Keychain may add organization prefixes to account names
+    password="$(security find-generic-password \
+        -s "$service" \
         -w 2>/dev/null)" || return 1
 
     if [[ -z "$password" ]]; then
@@ -94,14 +108,24 @@ credential_delete_platform() {
     local service="$1"
     local account="$2"
 
+    # Try with account first (standard case)
     if security delete-generic-password \
         -s "$service" \
         -a "$account" \
         &>/dev/null; then
         log_info "Credential deleted for service: $service"
-    else
-        log_info "Credential not found (may not exist): $service"
+        return 0
     fi
+
+    # Fallback: delete by service only (handles account name prefixes)
+    if security delete-generic-password \
+        -s "$service" \
+        &>/dev/null; then
+        log_info "Credential deleted for service: $service (service-only lookup)"
+        return 0
+    fi
+
+    log_info "Credential not found (may not exist): $service"
 }
 
 export -f credential_init_platform
