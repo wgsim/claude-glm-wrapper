@@ -106,23 +106,45 @@ main() {
         return 0
     fi
 
-    # Prompt for account name (with default)
-    echo "Account name for credential storage:"
-    echo "  Service: $KEYCHAIN_SERVICE"
-    read -rp "  Account [$KEYCHAIN_ACCOUNT]: " input_account
-    echo
-    # Use input if provided, otherwise use default
-    local account="${input_account:-$KEYCHAIN_ACCOUNT}"
+    # Prompt for account name (with default, validate not empty)
+    local account=""
+    while [[ -z "$account" ]]; do
+        echo "Account name for credential storage:"
+        echo "  Service: $KEYCHAIN_SERVICE"
+        read -rp "  Account [$KEYCHAIN_ACCOUNT]: " input_account
+        echo
+        # Use input if provided, otherwise use default
+        account="${input_account:-$KEYCHAIN_ACCOUNT}"
+        if [[ -z "$account" ]]; then
+            print_warning "Account name cannot be empty. Please try again."
+            echo
+        fi
+    done
 
-    # Prompt for API key
-    read -rp "Enter your Z.ai API key: " -s api_key
-    echo
-    echo
+    # Prompt for API key with retry loop
+    local max_attempts=3
+    local attempt=1
+    local api_key=""
 
-    # Validate API key (includes sanitization)
-    if ! validate_api_key "$api_key"; then
-        exit 1
-    fi
+    while [[ $attempt -le $max_attempts ]]; do
+        read -rp "Enter your Z.ai API key: " -s api_key
+        echo
+        echo
+
+        # Validate API key (includes sanitization)
+        if validate_api_key "$api_key"; then
+            break
+        fi
+
+        attempt=$((attempt + 1))
+        if [[ $attempt -le $max_attempts ]]; then
+            print_warning "Invalid API key format. Please try again. ($attempt/$max_attempts)"
+            echo
+        else
+            print_error "Too many failed attempts. Please try again later."
+            exit 1
+        fi
+    done
 
     # Check if key already exists and prompt for overwrite
     if credential_fetch "$KEYCHAIN_SERVICE" "$account" &>/dev/null; then
