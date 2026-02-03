@@ -428,13 +428,20 @@ main() {
 
         case "$REPLY" in
             1)
-                print_step "Running uninstall..."
-                if [[ -f "$INSTALL_DIR/scripts/uninstall.sh" ]]; then
-                    "$INSTALL_DIR/scripts/uninstall.sh"
+                print_step "Uninstalling existing installation..."
+                # Directly remove the installation directory
+                if command -v /opt/homebrew/opt/trash/bin/trash &>/dev/null; then
+                    /opt/homebrew/opt/trash/bin/trash "$INSTALL_DIR"
+                    print_success "Moved to trash: $INSTALL_DIR"
+                elif command -v trash &>/dev/null; then
+                    trash "$INSTALL_DIR"
+                    print_success "Moved to trash: $INSTALL_DIR"
                 else
-                    print_warning "Uninstall script not found, removing directory..."
                     rm -rf "$INSTALL_DIR"
+                    print_success "Removed: $INSTALL_DIR"
                 fi
+                # Wait a moment for filesystem sync
+                sleep 1
                 ;;
             2)
                 print_info "Will overwrite existing installation"
