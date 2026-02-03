@@ -46,12 +46,16 @@ credential_store_platform() {
         return 1
     fi
 
+    # Unlock keychain for SSH/non-interactive sessions
+    # May fail if keychain password differs from login password
+    security unlock-keychain &>/dev/null || true
+
     # Delete existing entry first (service-only lookup to handle account prefixes)
     security delete-generic-password \
         -s "$service" \
         &>/dev/null || true
 
-    # Add new entry with explicit type (no ACLs for maximum compatibility)
+    # Add new entry (no -t option, use defaults)
     # Note: -a "$account" may be modified by macOS on org-managed devices
     # We use service-only lookup for retrieval to handle this
     local output
@@ -59,13 +63,13 @@ credential_store_platform() {
         -a "$account" \
         -s "$service" \
         -w "$password" \
-        -t "genp" \
         -D "GLM API Key" \
         -j "Stored by claude-glm-wrapper" 2>&1)
 
-    # Check if command succeeded (security may return 0 even on failure)
-    if [[ "$output" == *"Usage:"* ]] || [[ "$output" == *"error:"* ]]; then
-        log_error "Failed to store credential: $output"
+    # Check for errors
+    if [[ "$output" == *"Usage:"* ]] || [[ "$output" == *"error:"* ]] || [[ "$output" == *"User interaction"* ]]; then
+        log_error "Failed to store credential"
+        log_error "If in SSH session, run: security unlock-keychain"
         return 1
     fi
 
