@@ -17,7 +17,29 @@
 
 set -euo pipefail
 
-# Detect platform
+# Platform detection (MUST be defined before use below)
+detect_platform() {
+    local ostype="${OSTYPE:-}"
+    local uname_s="$(uname -s 2>/dev/null || echo "")"
+
+    # Try OSTYPE first
+    case "$ostype" in
+        darwin*)  echo "macos"; return ;;
+        linux*)   echo "linux"; return ;;
+        msys*|mingw*|cygwin*) echo "windows"; return ;;
+    esac
+
+    # Fallback to uname
+    case "$uname_s" in
+        Darwin)  echo "macos"; return ;;
+        Linux)   echo "linux"; return ;;
+        MINGW*|MSYS*|CYGWIN*) echo "windows"; return ;;
+    esac
+
+    echo "unknown"
+}
+
+# Detect platform (now detect_platform is defined)
 CREDENTIAL_PLATFORM="${CREDENTIAL_PLATFORM:-$(detect_platform)}"
 
 # Load security configuration
@@ -46,28 +68,6 @@ export KEYCHAIN_SERVICE
 export KEYCHAIN_ACCOUNT
 export GLM_USE_MCP
 export GLM_INSTALL_DIR
-
-# Platform detection
-detect_platform() {
-    local ostype="${OSTYPE:-}"
-    local uname_s="$(uname -s 2>/dev/null || echo "")"
-
-    # Try OSTYPE first
-    case "$ostype" in
-        darwin*)  echo "macos"; return ;;
-        linux*)   echo "linux"; return ;;
-        msys*|mingw*|cygwin*) echo "windows"; return ;;
-    esac
-
-    # Fallback to uname
-    case "$uname_s" in
-        Darwin)  echo "macos"; return ;;
-        Linux)   echo "linux"; return ;;
-        MINGW*|MSYS*|CYGWIN*) echo "windows"; return ;;
-    esac
-
-    echo "unknown"
-}
 
 # Initialize credential backend
 credential_init() {

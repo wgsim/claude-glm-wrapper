@@ -57,7 +57,28 @@ detect_os() {
 
 # Detect current shell
 detect_shell() {
-    # First check current shell version variables
+    # Check $SHELL first (user's login shell) - most reliable
+    if [[ -n "${SHELL:-}" ]]; then
+        case "$SHELL" in
+            */zsh)
+                echo "zsh"
+                return
+                ;;
+            */bash)
+                # Still check if we're actually in bash (not just SHELL pointing to bash)
+                if [[ -n "${BASH_VERSION:-}" ]]; then
+                    echo "bash"
+                    return
+                fi
+                ;;
+            */fish)
+                echo "fish"
+                return
+                ;;
+        esac
+    fi
+
+    # Fallback: check current shell version variables
     if [[ -n "${ZSH_VERSION:-}" ]]; then
         echo "zsh"
         return
@@ -67,24 +88,6 @@ detect_shell() {
     elif [[ -n "${FISH_VERSION:-}" ]]; then
         echo "fish"
         return
-    fi
-
-    # Fallback: check $SHELL (user's default shell)
-    if [[ -n "${SHELL:-}" ]]; then
-        case "$SHELL" in
-            */zsh)
-                echo "zsh"
-                return
-                ;;
-            */bash)
-                echo "bash"
-                return
-                ;;
-            */fish)
-                echo "fish"
-                return
-                ;;
-        esac
     fi
 
     echo "unknown"
@@ -285,10 +288,22 @@ configure_path() {
                 cp "$shell_config" "${shell_config}.backup.$(date +%Y%m%d_%H%M%S)"
             fi
 
-            # Check if PATH already contains our bin directory
+            # Check if PATH already contains our bin directory in CURRENT shell config
             if grep -q -F "PATH=\"\$HOME/.claude-glm-mcp/bin:" "$shell_config" 2>/dev/null; then
                 print_info "PATH already configured in $shell_config"
             else
+                # Also check if PATH exists in other common shell configs and inform user
+                local found_in_other=""
+                if [[ -f "$HOME/.bashrc" ]] && grep -q -F "\.claude-glm-mcp/bin" "$HOME/.bashrc" 2>/dev/null; then
+                    found_in_other="~/.bashrc"
+                elif [[ -f "$HOME/.zshrc" ]] && grep -q -F "\.claude-glm-mcp/bin" "$HOME/.zshrc" 2>/dev/null; then
+                    found_in_other="~/.zshrc"
+                fi
+
+                if [[ -n "$found_in_other" && "$found_in_other" != "$shell_config" ]]; then
+                    print_info "Note: PATH also exists in $found_in_other (different shell)"
+                fi
+
                 echo "
 # GLM MCP Wrapper - Added by ~/.claude-glm-mcp/scripts/install.sh
 export PATH=\"\$HOME/.claude-glm-mcp/bin:\$PATH\"" >> "$shell_config"
