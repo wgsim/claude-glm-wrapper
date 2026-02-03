@@ -51,16 +51,7 @@ credential_store_platform() {
         -s "$service" \
         &>/dev/null || true
 
-    # Find actual binary paths for ACLs (less restrictive)
-    local wrapper_path
-    wrapper_path="${GLM_INSTALL_DIR:-$HOME/.claude-glm-mcp}/bin/glm-mcp-wrapper"
-
-    # Build ACL flags (only wrapper script, not node/npx)
-    # Using -U for user-only access (more compatible)
-    local acl_flags=()
-    [[ -f "$wrapper_path" ]] && acl_flags+=(-U "$wrapper_path")
-
-    # Add new entry with explicit type and minimal ACLs
+    # Add new entry with explicit type (no ACLs for maximum compatibility)
     # Note: -a "$account" may be modified by macOS on org-managed devices
     # We use service-only lookup for retrieval to handle this
     local output
@@ -70,7 +61,6 @@ credential_store_platform() {
         -w "$password" \
         -t "genp" \
         -D "GLM API Key" \
-        "${acl_flags[@]:-}" \
         -j "Stored by claude-glm-wrapper" 2>&1)
 
     # Check if command succeeded (security may return 0 even on failure)
