@@ -237,6 +237,79 @@ When running `claude` directly (not via `claude-by-glm`):
 - MCP wrapper stays inactive (sleeps)
 - Uses official Anthropic models
 
+## Session Isolation
+
+Each `claude-by-glm` session creates an isolated settings file to prevent model configuration from affecting other Claude Code sessions.
+
+**Session Directory**: `~/.claude/glm-sessions/`
+
+**How it works**:
+1. When you run `claude-by-glm`, a unique session ID is generated
+2. A copy of base settings is created: `~/.claude/settings.glm.json` → `~/.claude/glm-sessions/glm-<timestamp>-<pid>.json`
+3. The session uses `CLAUDE_SETTINGS` environment variable to point to the isolated file
+4. Model changes in GLM sessions don't affect your default Claude Code
+
+**Base Settings**: `~/.claude/settings.glm.json` (created during installation)
+
+## Maintenance
+
+### Update Installation
+
+Use `glm-update` to update an existing installation without reinstalling:
+
+```bash
+# Update from project directory (auto-detected)
+~/.claude-glm-mcp/bin/glm-update
+
+# Preview changes before updating
+~/.claude-glm-mcp/bin/glm-update --dry-run
+
+# Force update even if versions match
+~/.claude-glm-mcp/bin/glm-update --force
+
+# Update with custom paths
+glm-update --from /path/to/project --to /custom/install
+```
+
+The updater:
+- Compares files and copies only changes
+- Creates a backup before updating
+- Preserves your configuration and credentials
+- Shows what will be updated before proceeding
+
+### Clean Up Old Sessions
+
+Use `glm-cleanup-sessions` to manage old session files:
+
+```bash
+# Keep last 10 sessions, remove older ones (default)
+~/.claude-glm-mcp/bin/glm-cleanup-sessions
+
+# Keep last 5 sessions
+~/.claude-glm-mcp/bin/glm-cleanup-sessions --keep 5
+
+# List all sessions with details
+~/.claude-glm-mcp/bin/glm-cleanup-sessions --list
+
+# Delete specific session
+~/.claude-glm-mcp/bin/glm-cleanup-sessions --session glm-1738634123-1234
+
+# Delete multiple sessions
+~/.claude-glm-mcp/bin/glm-cleanup-sessions --session glm-1738634123-1234 glm-1738634256-5678
+
+# Remove all session files
+~/.claude-glm-mcp/bin/glm-cleanup-sessions --all
+
+# Preview what would be deleted
+~/.claude-glm-mcp/bin/glm-cleanup-sessions --dry-run
+```
+
+**Automation**: Add to crontab for automatic cleanup:
+```bash
+# Run daily at midnight, keep last 10 sessions
+0 0 * * * ~/.claude-glm-mcp/bin/glm-cleanup-sessions --keep 10
+```
+
 ## Configuration
 
 ### MCP Server Toggle
@@ -276,7 +349,9 @@ The uninstaller will:
 ├── bin/
 │   ├── glm-mcp-wrapper      # MCP wrapper script
 │   ├── install-key.sh       # API key registration
-│   └── claude-by-glm        # Main launcher
+│   ├── claude-by-glm        # Main launcher
+│   ├── glm-cleanup-sessions # Session cleanup utility
+│   └── glm-update           # Update utility
 ├── config/
 │   └── mcp.conf             # MCP server configuration (GLM_USE_MCP)
 ├── credentials/

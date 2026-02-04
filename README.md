@@ -9,7 +9,9 @@ Use Z.ai GLM models (glm-4.5-air, glm-4.6, glm-4.7) with Claude Code while keepi
 - **Secure Storage**: Platform credential storage, no hardcoded credentials in JSON
 - **Dual Mode**: Same configuration works for both official Claude and GLM models
 - **Optional Z.ai MCP**: Configurable Z.ai MCP server - enable tools or maximize security
-- **Security Hardened**: Restrictive ACLs, core dump prevention, env var cleanup
+- **Session Isolation**: GLM sessions use isolated settings, don't affect default Claude
+- **Easy Updates**: Built-in update utility without full reinstall
+- **Security Hardened**: Input validation, restrictive ACLs, core dump prevention, env var cleanup
 
 ## Quick Start
 
@@ -41,6 +43,7 @@ claude-by-glm [arguments]
 - [INSTALL.md](INSTALL.md) - Detailed installation guide
 - [TROUBLESHOOTING.md](TROUBLESHOOTING.md) - Common issues and solutions
 - [SECURITY.md](SECURITY.md) - Security information
+- [ROADMAP.md](ROADMAP.md) - Future development plans
 
 ## Architecture
 

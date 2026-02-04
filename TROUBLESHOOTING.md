@@ -9,7 +9,9 @@ Common issues and solutions for GLM MCP Wrapper System.
 3. [MCP Wrapper Issues](#mcp-wrapper-issues)
 4. [Claude-by-glm Issues](#claude-by-glm-issues)
 5. [Configuration Issues](#configuration-issues)
-6. [Platform-Specific Issues](#platform-specific-issues)
+6. [Session Issues](#session-issues)
+7. [Update Issues](#update-issues)
+8. [Platform-Specific Issues](#platform-specific-issues)
 
 ## Installation Issues
 
@@ -96,6 +98,30 @@ security find-generic-password -s "z.ai-api-key" -a "$USER" -w
 ```bash
 # Delete and re-register
 security delete-generic-password -s "z.ai-api-key" -a "$USER"
+~/.claude-glm-mcp/bin/install-key.sh
+```
+
+### "Invalid characters in account name"
+
+**Cause**: Account name contains invalid characters (whitespace, special chars, path traversal).
+
+**Valid characters**: Letters, numbers, dot (.), underscore (_), hyphen (-)
+
+**Solution**:
+```bash
+# Use a simple account name without special characters
+~/.claude-glm-mcp/bin/install-key.sh
+# Enter account name: myuser (not "my user" or "my/user")
+```
+
+### "API key contains invalid characters"
+
+**Cause**: API key contains whitespace, quotes, backticks, or shell metacharacters.
+
+**Solution**:
+```bash
+# Re-enter API key carefully, ensuring no extra spaces
+# Paste directly from source without modifications
 ~/.claude-glm-mcp/bin/install-key.sh
 ```
 
@@ -256,7 +282,157 @@ source ~/.config/fish/config.fish  # fish
 echo $PATH | grep glm-mcp
 ```
 
+## Session Issues
+
+### "GLM Sessions Directory Not Found"
+
+**Cause**: Session directory doesn't exist (normal if you haven't run `claude-by-glm` yet).
+
+**Solution**:
+```bash
+# The directory is created automatically when you run claude-by-glm
+# Check if sessions exist
+ls -la ~/.claude/glm-sessions/
+```
+
+### Model Changes Affect Other Claude Sessions
+
+**Cause**: Using `claude` directly instead of `claude-by-glm`, or session isolation not working.
+
+**Solution**:
+```bash
+# Always use claude-by-glm for GLM models
+claude-by-glm [arguments]
+
+# Check session files exist
+ls ~/.claude/glm-sessions/
+
+# Verify base settings exist
+cat ~/.claude/settings.glm.json
+```
+
+**Note**: Session isolation ensures that model changes in GLM sessions don't affect your default Claude Code configuration.
+
+### Too Many Session Files
+
+**Cause**: Session files accumulate over time.
+
+**Solution**:
+```bash
+# List all sessions
+~/.claude-glm-mcp/bin/glm-cleanup-sessions --list
+
+# Keep last 10 sessions, remove older ones
+~/.claude-glm-mcp/bin/glm-cleanup-sessions --keep 10
+
+# Remove all session files
+~/.claude-glm-mcp/bin/glm-cleanup-sessions --all
+
+# Add to crontab for automatic cleanup
+# 0 0 * * * ~/.claude-glm-mcp/bin/glm-cleanup-sessions --keep 10
+```
+
+### Session File Permission Errors
+
+**Cause**: Incorrect permissions on session directory or files.
+
+**Solution**:
+```bash
+# Fix session directory permissions
+chmod 700 ~/.claude/glm-sessions
+chmod 600 ~/.claude/glm-sessions/*.json
+
+# Recreate base settings if needed
+~/.claude-glm-mcp/scripts/install.sh
+```
+
+## Update Issues
+
+### "glm-update: command not found"
+
+**Cause**: Update utility not available in older installations.
+
+**Solution**:
+```bash
+# Re-run installer to get latest utilities
+cd /path/to/claude-by-glm_safety_setting
+./scripts/install.sh
+```
+
+### "Could not auto-detect source directory"
+
+**Cause**: Update script can't find project directory.
+
+**Solution**:
+```bash
+# Specify source directory explicitly
+glm-update --from /path/to/claude-by-glm_safety_setting
+```
+
+### Update Shows "No files need updating"
+
+**Cause**: Versions match and no files changed.
+
+**Solution**:
+```bash
+# Force update even if versions match
+glm-update --force
+
+# Preview what would be updated
+glm-update --dry-run
+```
+
+### Update Failed, Installation Broken
+
+**Cause**: Update process interrupted or files corrupted.
+
+**Solution**:
+```bash
+# Restore from backup
+ls ~/.claude-glm-mcp/backups/
+# Copy files from latest backup to restore
+
+# Or reinstall completely
+~/.claude-glm-mcp/scripts/uninstall.sh
+cd /path/to/claude-by-glm_safety_setting
+./scripts/install.sh
+```
+
 ## Platform-Specific Issues
+
+### macOS: Keychain Account Name Prefix
+
+**Issue**: On organization-managed Macs, account names may have prefix like `Campus\134username` instead of `username`.
+
+**Symptoms**:
+```bash
+# Key stored with prefix, but lookup fails
+security find-generic-password -s "z.ai-api-key" -a "username" -w
+# Error: The specified item could not be found in the keychain
+```
+
+**Solution**: The wrapper now uses service-only lookup (without `-a` account option) to handle this transparently. If you still have issues:
+
+```bash
+# Check what account name was actually used
+security dump-keychain -i $HOME/Library/Keychains/login.keychain-db | grep -A 5 "z.ai-api-key"
+
+# Re-register key with your actual username
+~/.claude-glm-mcp/bin/install-key.sh
+```
+
+### macOS: "User interaction is not allowed" (SSH)
+
+**Cause**: Keychain locked in SSH session, can't show GUI dialogs.
+
+**Solution**:
+```bash
+# Unlock keychain for SSH session
+security unlock-keychain $HOME/Library/Keychains/login.keychain-db
+
+# Or set keychain to not lock on sleep
+# Keychain Access app → Select login keychain → Edit → Change Settings for Keychain "login"
+```
 
 ### macOS: Keychain Permission Prompt
 
