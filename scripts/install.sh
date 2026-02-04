@@ -188,6 +188,7 @@ create_directories() {
     mkdir -p "$INSTALL_DIR/config"
     mkdir -p "$INSTALL_DIR/credentials"
     mkdir -p "$INSTALL_DIR/scripts"
+    mkdir -p "$INSTALL_DIR/completion"
 
     print_success "Directories created: $INSTALL_DIR"
 }
@@ -218,6 +219,10 @@ copy_files() {
     cp -f "$PROJECT_DIR/credentials/security.conf" "$INSTALL_DIR/credentials/"
     cp -f "$PROJECT_DIR/scripts/install.sh" "$INSTALL_DIR/scripts/"
     cp -f "$PROJECT_DIR/scripts/uninstall.sh" "$INSTALL_DIR/scripts/"
+    # Copy completion scripts
+    cp -f "$PROJECT_DIR/completion/glm-completion.bash" "$INSTALL_DIR/completion/" 2>/dev/null || true
+    cp -f "$PROJECT_DIR/completion/glm-completion.zsh" "$INSTALL_DIR/completion/" 2>/dev/null || true
+    cp -f "$PROJECT_DIR/completion/glm-completion.fish" "$INSTALL_DIR/completion/" 2>/dev/null || true
 
     print_success "Files copied to $INSTALL_DIR"
 }
@@ -254,6 +259,95 @@ backup_claude_config() {
         cp "$claude_json" "$backup_file"
         print_info "Backed up .claude.json to: $backup_file"
     fi
+}
+
+# Configure shell completion
+configure_completion() {
+    echo
+    print_step "Shell Completion Configuration"
+    echo
+    print_info "Would you like to enable shell completion for GLM commands?"
+    echo
+    echo "This provides Tab completion for:"
+    echo "  - glm-cleanup-sessions (options, session IDs)"
+    echo "  - glm-update (options, directories)"
+    echo
+    echo "Options:"
+    echo "  1) Yes - Add to shell config (recommended)"
+    echo "  2) No  - Skip (you can manually add it later)"
+    echo
+    read -rp "Choose [1/2]: " -n 1 -r
+    echo
+
+    case "$REPLY" in
+        1)
+            local shell
+            local shell_config
+            local completion_file
+
+            shell="$(detect_shell)"
+            shell_config="$(get_shell_config "$shell")"
+
+            if [[ -z "$shell_config" ]]; then
+                print_error "Could not determine shell config file"
+                print_info "Please manually add completion to your shell config"
+                return 0
+            fi
+
+            case "$shell" in
+                bash)
+                    completion_file="source \"$INSTALL_DIR/completion/glm-completion.bash\""
+                    ;;
+                zsh)
+                    completion_file="source \"$INSTALL_DIR/completion/glm-completion.zsh\""
+                    ;;
+                fish)
+                    # Fish uses a different mechanism
+                    local fish_completion_dir="$HOME/.config/fish/completions"
+                    mkdir -p "$fish_completion_dir" 2>/dev/null || true
+                    cp -f "$INSTALL_DIR/completion/glm-completion.fish" "$fish_completion_dir/glm-cleanup-sessions.fish" 2>/dev/null || true
+                    cp -f "$INSTALL_DIR/completion/glm-completion.fish" "$fish_completion_dir/glm-update.fish" 2>/dev/null || true
+                    print_success "Fish completion installed to: $fish_completion_dir"
+                    print_info "Restart fish or run: source $fish_completion_dir/glm-cleanup-sessions.fish"
+                    return 0
+                    ;;
+                *)
+                    print_warning "Unsupported shell for completion: $shell"
+                    return 0
+                    ;;
+            esac
+
+            # Backup existing config
+            if [[ -f "$shell_config" ]]; then
+                cp "$shell_config" "${shell_config}.backup.$(date +%Y%m%d_%H%M%S)"
+            fi
+
+            # Check if completion already exists
+            if grep -q -F "glm-completion" "$shell_config" 2>/dev/null; then
+                print_info "Completion already configured in $shell_config"
+            else
+                echo "
+# GLM MCP Wrapper Completion - Added by ~/.claude-glm-mcp/scripts/install.sh
+$completion_file" >> "$shell_config"
+                print_success "Completion added to: $shell_config"
+                print_info "Run: source $shell_config"
+            fi
+            ;;
+        2)
+            print_info "Skipped. You can manually add later:"
+            case "$shell" in
+                bash)
+                    echo "  source \"$INSTALL_DIR/completion/glm-completion.bash\""
+                    ;;
+                zsh)
+                    echo "  source \"$INSTALL_DIR/completion/glm-completion.zsh\""
+                    ;;
+                fish)
+                    echo "  cp $INSTALL_DIR/completion/glm-completion.fish ~/.config/fish/completions/"
+                    ;;
+            esac
+            ;;
+    esac
 }
 
 # Prompt for PATH configuration
@@ -414,6 +508,24 @@ print_next_steps() {
     # OS-specific notes
     case "$os" in
         macos)
+            echo "  4. Reload your shell to use changes:"
+            echo "     source ~/.zshrc   # or ~/.bashrc"
+            ;;
+        linux)
+            echo "  4. Reload your shell to use changes:"
+            echo "     source ~/.bashrc  # or ~/.zshrc"
+            echo
+            echo "  Note: On Linux, install-key.sh requires 'secret-tool' (libsecret)."
+            ;;
+        windows)
+            echo "  Note: Keychain not supported on Windows."
+            echo "        Use install-key.sh with direct API key input."
+            ;;
+    esac
+
+    # OS-specific notes
+    case "$os" in
+        macos)
             echo "  4. Reload your shell to use PATH changes:"
             echo "     source ~/.zshrc   # or ~/.bashrc"
             ;;
@@ -505,6 +617,9 @@ main() {
     else
         print_info "PATH configuration skipped (.no-path-prompt exists)"
     fi
+
+    # Configure shell completion
+    configure_completion
 
     # Prompt for API key
     prompt_api_key
