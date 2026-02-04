@@ -154,11 +154,35 @@ EOF
         print_info "Using custom model repository: $GLM_MODEL_REPO"
     fi
 
-    # Claude settings (optional, can be overridden)
-    local claude_settings="$HOME/.claude/settings.glm.json"
-    if [[ -f "$claude_settings" ]]; then
-        export CLAUDE_SETTINGS="$claude_settings"
+    # Create session-specific settings for isolation
+    # This prevents GLM sessions from affecting default Claude Code sessions
+    local glm_sessions_dir="$HOME/.claude/glm-sessions"
+    mkdir -p "$glm_sessions_dir"
+
+    # Generate unique session ID based on timestamp and PID
+    local session_id="glm-$(date +%s)-$$"
+    local session_settings="$glm_sessions_dir/$session_id.json"
+
+    # Copy base GLM settings if available, otherwise use default settings
+    local base_settings="$HOME/.claude/settings.glm.json"
+    if [[ -f "$base_settings" ]]; then
+        cp "$base_settings" "$session_settings"
+    else
+        # Create minimal session settings if base doesn't exist
+        cat > "$session_settings" << 'EOF'
+{
+  "plugins": []
+}
+EOF
     fi
+
+    # Export CLAUDE_SETTINGS to use session-specific config
+    export CLAUDE_SETTINGS="$session_settings"
+
+    # Store session info for cleanup (optional)
+    echo "$session_id" > "$glm_sessions_dir/.last-session"
+
+    print_info "Using isolated session settings: $session_settings"
 
     # Load MCP configuration
     load_mcp_config
