@@ -20,7 +20,8 @@ set -euo pipefail
 # Platform detection (MUST be defined before use below)
 detect_platform() {
     local ostype="${OSTYPE:-}"
-    local uname_s="$(uname -s 2>/dev/null || echo "")"
+    local uname_s
+    uname_s="$(uname -s 2>/dev/null || echo "")"
 
     # Try OSTYPE first
     case "$ostype" in
@@ -45,7 +46,8 @@ CREDENTIAL_PLATFORM="${CREDENTIAL_PLATFORM:-$(detect_platform)}"
 # Load security configuration (safe parsing, not code execution)
 # Try to load from project security.conf, with fallback defaults
 load_security_config() {
-    local script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+    local script_dir
+    script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
     local config_file="$script_dir/credentials/security.conf"
 
     # Fallback defaults (used if config file missing or values not found)

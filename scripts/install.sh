@@ -161,7 +161,9 @@ backup_claude_config() {
 
     if [[ -f "$claude_json" ]]; then
         mkdir -p "$backup_dir"
-        local backup_file="$backup_dir/.claude.json.backup.$(date +%Y%m%d_%H%M%S)"
+        local timestamp
+        timestamp="$(date +%Y%m%d_%H%M%S)"
+        local backup_file="$backup_dir/.claude.json.backup.$timestamp"
         cp "$claude_json" "$backup_file"
         print_info "Backed up .claude.json to: $backup_file"
     fi
@@ -301,9 +303,9 @@ configure_path() {
                 # Also check if PATH exists in other common shell configs and inform user
                 local found_in_other=""
                 if [[ -f "$HOME/.bashrc" ]] && grep -q -F "\.claude-glm-mcp/bin" "$HOME/.bashrc" 2>/dev/null; then
-                    found_in_other="~/.bashrc"
+                    found_in_other="\$HOME/.bashrc"
                 elif [[ -f "$HOME/.zshrc" ]] && grep -q -F "\.claude-glm-mcp/bin" "$HOME/.zshrc" 2>/dev/null; then
-                    found_in_other="~/.zshrc"
+                    found_in_other="\$HOME/.zshrc"
                 fi
 
                 if [[ -n "$found_in_other" && "$found_in_other" != "$shell_config" ]]; then
@@ -388,7 +390,8 @@ create_glm_settings() {
     # Check if claude-dashboard is available
     local dashboard_line=""
     if [[ -f "$HOME/.claude/plugins/cache/claude-dashboard/claude-dashboard" ]]; then
-        local dashboard_path=$(find "$HOME/.claude/plugins/cache/claude-dashboard/claude-dashboard" -name "index.js" -path "*/dist/*" 2>/dev/null | head -1)
+        local dashboard_path
+        dashboard_path=$(find "$HOME/.claude/plugins/cache/claude-dashboard/claude-dashboard" -name "index.js" -path "*/dist/*" 2>/dev/null | head -1)
         if [[ -n "$dashboard_path" ]]; then
             dashboard_line="  \"statusLine\": {
     \"type\": \"command\",
