@@ -8,7 +8,11 @@
       "Bash(grep:*)",
       "Bash(find:*)",
       "Bash(bash:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(git tag:*)",
+      "Bash(/Users/woogwangsim/AI_development/claude-by-glm_safety_setting/bin/glm-update:*)",
+      "Bash(command:*)",
+      "Skill(glm-plan-usage:usage-query-skill)"
     ]
   }
 }

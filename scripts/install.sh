@@ -466,6 +466,43 @@ prompt_mcp_config() {
     echo
 }
 
+# Create GLM settings file
+create_glm_settings() {
+    print_step "Creating GLM settings file..."
+
+    local glm_settings="$HOME/.claude/settings.glm.json"
+
+    # Skip if already exists (preserve user modifications)
+    if [[ -f "$glm_settings" ]]; then
+        print_info "Settings file already exists: $glm_settings"
+        print_info "Preserving existing configuration"
+        return 0
+    fi
+
+    # Check if claude-dashboard is available
+    local dashboard_line=""
+    if [[ -f "$HOME/.claude/plugins/cache/claude-dashboard/claude-dashboard" ]]; then
+        local dashboard_path=$(find "$HOME/.claude/plugins/cache/claude-dashboard/claude-dashboard" -name "index.js" -path "*/dist/*" 2>/dev/null | head -1)
+        if [[ -n "$dashboard_path" ]]; then
+            dashboard_line="  \"statusLine\": {
+    \"type\": \"command\",
+    \"command\": \"node $dashboard_path\"
+  },"
+        fi
+    fi
+
+    # Create settings.glm.json WITHOUT enabledPlugins
+    # This allows Claude to auto-detect plugins from installed_plugins.json
+    cat > "$glm_settings" << EOF
+{
+$dashboard_line
+}
+EOF
+
+    print_success "Created: $glm_settings"
+    print_info "Plugins will be auto-detected from installed_plugins.json"
+}
+
 # Print next steps
 print_next_steps() {
     local os
@@ -626,6 +663,9 @@ main() {
 
     # Prompt for MCP configuration
     prompt_mcp_config
+
+    # Create GLM settings file
+    create_glm_settings
 
     # Print next steps
     print_next_steps

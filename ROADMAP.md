@@ -6,7 +6,7 @@ Future development plans and potential improvements for the GLM MCP Wrapper Syst
 
 | Version | Date | Changes |
 |---------|------|---------|
-| v1.7.2 | 2026-02-04 | ROADMAP refocused on Phase 2 (GLM Team Mode) |
+| v1.7.2 | 2026-02-05 | ROADMAP updated: GLM Team Mode moved to separate project |
 | v1.7.1 | 2026-02-04 | Documentation update (INSTALL, TROUBLESHOOTING, ROADMAP) |
 | v1.7.0 | 2026-02-03 | Add `--list` and `--session` options to glm-cleanup-sessions |
 | v1.7.0 | 2026-02-03 | Add glm-update and glm-cleanup-sessions utilities |
@@ -25,135 +25,6 @@ Future development plans and potential improvements for the GLM MCP Wrapper Syst
 > Available models: GLM-4.7, GLM-4.6, GLM-4.5, GLM-4.5-Air, and Vision MCP (GLM-4.6V).
 
 ### Priority: High
-
-#### GLM Team Mode ⭐ NEW (Phase 2)
-**Planned**: Flexible multi-agent workflow with Solo/Team mode switching.
-
-**Available Models** (via Z.ai GLM Coding Plan):
-
-| Series | Models | Context | Best For |
-|--------|--------|---------|----------|
-| **GLM-4.7** | glm-4.7 | 200K+ | Complex tasks, orchestration |
-| **GLM-4.6** | glm-4.6 | 200K | General coding, collaboration |
-| **GLM-4.5** | glm-4.5, glm-4.5-air | 128K | Cost-effective, quick tasks |
-| **Vision** | glm-4.6v (via MCP) | 128K | Screenshot analysis, OCR, diagrams |
-
-**Three Modes with Flexible Switching**:
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    GLM Multi-Agent Modes                       │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  Mode 1: Solo (단일 모드) ✅ 현재 지원                           │
-│  ├─ 하나의 모델만 사용                                          │
-│  ├─ 빠르고 간단한 작업                                          │
-│  └─ 예: /model 4.7                                             │
-│                                                                 │
-│  Mode 2: Team (커스텀 팀) ⭐ Phase 2                             │
-│  ├─ 사용자 정의 서브에이전트 팀                                 │
-│  ├─ 유연한 역할/모델 할당                                       │
-│  └─ 예: /team activate "my-glm-team"                           │
-│                                                                 │
-│  Mode 3: Swarm (자동 스웜) 🔮 미래 (Phase 3)                    │
-│  ├─ 100+ 전문 에이전트 자동 조율                                │
-│  ├─ 병렬 실행, task decomposition                               │
-│  └─ 예: /swarm enable (Claude Code 공식화 후)                  │
-│                                                                 │
-│  모드 간 자유 전환 (유동성)                                      │
-│  Solo ↔ Team ↔ Swarm                                           │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-**Solo Mode Features** (현재 지원):
-- `/model` command for quick switching
-- Model capability display
-- Current model indicator
-
-**Team Mode Features** (Phase 2 구현 예정):
-- `/team create` - Define custom agent teams
-- `/team activate` - Switch to team mode
-- `/team deactivate` - Return to solo mode
-- `/team list` - Show all available teams
-- Flexible role-to-model mapping
-- Team configuration files
-
-**Example**:
-```bash
-# Solo mode (current)
-> /model 4.7
-✓ Switched to glm-4.7 (most capable)
-
-# Team mode (Phase 2)
-> /team create "glm-reviewers"
-Orchestrator: glm-4.7
-Code Reviewer: glm-4.6
-Quick Fixer: glm-4.5-air
-Vision Expert: glm-4.6v (Vision MCP)
-✓ Created team: glm-reviewers
-
-> /team activate "glm-reviewers"
-✓ Team mode activated (4 agents)
-
-> [user uploads screenshot] "이 UI 문제 봐줘"
-Orchestrator (glm-4.7): @VisionExpert 이 스크린샷 분석 부탁해
-Vision Expert (glm-4.6v): [Vision MCP] 버튼 정렬 문제 발견...
-Code Reviewer (glm-4.6): 수정 제안: flexbox 사용...
-
-> /team deactivate
-✓ Team mode deactivated, back to solo
-```
-
-**Agent Role System** (역할 ≠ 모델 분리):
-
-| Agent Role | Default Model | Alternative Models |
-|------------|---------------|-------------------|
-| Orchestrator | glm-4.7 | glm-4.6, glm-4.5 |
-| Code Specialist | glm-4.6 | glm-4.7, glm-4.5-air |
-| Fast Coder | glm-4.5-air | glm-4.5, glm-4.6 |
-| Vision Expert | glm-4.6v (MCP) | - |
-| QA Specialist | glm-4.6 | glm-4.7 |
-
-**Smart Task Detection** (자동 모드/모델 추천):
-- Keyword-based task classification
-- Suggest best mode (Solo vs Team)
-- Recommend optimal model/role combination
-
-**Example**:
-```bash
-> "복잡한 아키텍처 설계 검토해줘"
-💡 Complex task detected. Recommending: Team mode
-Orchestrator: glm-4.7 (coordination)
-Code Specialist: glm-4.6 (architecture review)
-Use /team activate "glm-reviewers" or /model 4.7 for solo
-
-> "간단한 함수 리팩토링"
-💡 Simple task detected. Solo mode sufficient
-Use /model 4.5-air for quick results
-```
-
-**Differentiation**: Claude Code = manual agent creation vs. claude-by-glm = GLM-optimized teams with smart suggestions
-
-**References**:
-- [GLM-4.7 Official Docs](https://docs.z.ai/guides/llm/glm-4.7)
-- [GLM-4.6 Official Docs](https://docs.z.ai/guides/llm/glm-4.6)
-- [GLM-4.5 Official Docs](https://docs.z.ai/guides/llm/glm-4.5)
-- [GLM-4-32B-0414-128K Docs](https://docs.z.ai/guides/llm/glm-4-32b-0414-128k)
-- [GLM-4.6V (Vision) Docs](https://docs.z.ai/guides/vlm/glm-4.6v)
-- [GLM-OCR Docs](https://docs.z.ai/guides/vlm/glm-ocr)
-- [GLM-Image Docs](https://docs.z.ai/guides/image/glm-image)
-- [GLM-ASR-2512 Docs](https://docs.z.ai/guides/audio/glm-asr-2512)
-- [Function Calling Docs](https://docs.z.ai/guides/capabilities/function-calling)
-- [Slide/Poster Agent Docs](https://docs.z.ai/guides/agents/slide)
-- [Translation Agent Docs](https://docs.z.ai/guides/agents/translation)
-- [Video Effect Template Agent Docs](https://docs.z.ai/guides/agents/video-template)
-- [Zhipu AI Model Center](https://open.bigmodel.cn/dev/howuse/model)
-
-**References** (Multi-Agent):
-- [Create custom subagents - Claude Code Docs](https://code.claude.com/docs/en/sub-agents)
-- [How we built our multi-agent research system - Anthropic](https://www.anthropic.com/engineering/multi-agent-research-system)
-- [When to use multi-agent systems - Anthropic](https://claude.com/blog/building-multi-agent-systems-when-and-how-to-use-them)
 
 #### Shell Completion Scripts
 **Planned**: Bash/zsh/fish completion for all commands.
@@ -237,25 +108,6 @@ OCR Result: "Module not found: 'react-dom'"
 ---
 
 ### Priority: Medium
-
-#### Configuration File Support
-**Planned**: Support for `.glmrc` or `config.json` for user preferences.
-
-**Features**:
-- Default model selection
-- MCP server toggle
-- Session cleanup policy
-- Update source directory
-
-**Example**:
-```json
-{
-  "defaultModel": "glm-4.7",
-  "mcpEnabled": true,
-  "sessionKeepCount": 10,
-  "updateSource": "~/projects/claude-by-glm_safety_setting"
-}
-```
 
 #### Automatic Update Check
 **Planned**: Check for updates on startup or periodically.
@@ -615,6 +467,8 @@ The following features were removed from the roadmap to avoid duplicating existi
 | **Session Profiles** | v1.7.1 | User feedback indicated low priority | Environment-specific configs |
 | **LSP Integration** | v1.7.1 | Claude Code V3 already has LSP support | Claude Code native |
 | **MCP Tool Optimization** | v1.7.1 | Claude Code core development responsibility | Claude Code native |
+| **GLM Team Mode** | v1.7.2 | Moved to separate project: [claude-adaptive-workflow](https://github.com/wgsim/claude-adaptive-workflow) | Separate plugin for universal Claude Code usage |
+| **Configuration File Support** | v1.7.2 | Claude Code already provides project-level settings via `~/.claude.json` | Claude Code native project configuration |
 
 **Differentiation Strategy**: "GLM Specialist" vs "Multi-Model Generalist"
 - Focus on GLM-specific features (10+ models, smart suggestions, cost optimization)
