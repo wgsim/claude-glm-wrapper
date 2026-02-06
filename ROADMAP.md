@@ -6,6 +6,7 @@ Future development plans and potential improvements for the GLM MCP Wrapper Syst
 
 | Version | Date | Changes |
 |---------|------|---------|
+| v1.7.3 | 2026-02-05 | ROADMAP: Add Smart Model Suggestion, demote Statistics (plugin exists) |
 | v1.7.2 | 2026-02-05 | ROADMAP updated: GLM Team Mode moved to separate project |
 | v1.7.1 | 2026-02-04 | Documentation update (INSTALL, TROUBLESHOOTING, ROADMAP) |
 | v1.7.0 | 2026-02-03 | Add `--list` and `--session` options to glm-cleanup-sessions |
@@ -25,6 +26,44 @@ Future development plans and potential improvements for the GLM MCP Wrapper Syst
 > Available models: GLM-4.7, GLM-4.6, GLM-4.5, GLM-4.5-Air, and Vision MCP (GLM-4.6V).
 
 ### Priority: High
+
+#### Smart Model Suggestion ⭐ NEW
+**Planned**: Automatically recommend the optimal GLM model based on task type.
+
+**Inspired by**: Claude Code's model selection (Opus for Plan mode, Sonnet for other tasks)
+
+**Task Type Detection**:
+
+| Task Type | Recommended Model | Rationale |
+|-----------|-------------------|-----------|
+| **Planning/Architecture** | GLM-4.7 | Complex reasoning, maximum capability |
+| **Coding/Implementation** | GLM-4.6 | Balance of speed and accuracy |
+| **Quick Questions** | GLM-4.5-Air | Fast responses, cost-effective |
+| **Vision/Screenshot Analysis** | GLM-4.6V (MCP) | Multimodal capability |
+| **Code Review** | GLM-4.7 | Deep analysis required |
+
+**Example**:
+```bash
+> "Design the architecture for a microservices payment system"
+💡 Complex planning task detected. Recommended: GLM-4.7
+(Use --model glm-4.6 for faster response)
+
+> "How do I grep for a pattern in files?"
+💡 Simple question detected. Recommended: GLM-4.5-Air
+(Current: GLM-4.7 - consider using faster model for cost savings)
+
+> [uploads screenshot]
+💡 Image detected. Recommended: GLM-4.6V (Vision MCP)
+```
+
+**Implementation Notes**:
+- Heuristic-based detection (keywords, complexity, context)
+- User override with `--model` flag
+- Learn from user choices over time
+
+**References**:
+- [Claude Code - Smart Model Selection](https://github.com/anthropics/claude-code/discussions/)
+- [Alibaba Cloud Model Selection Guide](https://www.alibabacloud.com/help/en/model-studio)
 
 #### Shell Completion Scripts
 **Planned**: Bash/zsh/fish completion for all commands.
@@ -60,18 +99,17 @@ cmdkey /generic:z.ai-api-key | Select-String "Pass"
 **Benefits**: Secure credential storage on Windows, matching macOS/Linux functionality.
 
 #### Statistics and Usage Tracking
-**Planned**: Track API usage across sessions (upgrade from Low to High priority).
+**Status**: ⚠️ **Lower priority** - `glm-plan-usage` plugin already provides this functionality.
 
-**Metrics**:
-- Total requests per model
-- Token usage and costs
-- Session count and size
-- Last cleanup time
+**Available via Plugin**:
+```bash
+# Query current usage
+/glm-plan-usage:usage-query
 
-**Benefits**:
-- Cost monitoring and optimization
-- Usage pattern analysis
-- Quota management
+# Returns: quota used, remaining, reset time
+```
+
+**Future Enhancement**: Native integration (no plugin required) for simplified experience.
 
 #### Vision MCP Integration ⭐ NEW
 **Planned**: Enhanced integration with Z.ai Vision MCP Server (included in subscription).
