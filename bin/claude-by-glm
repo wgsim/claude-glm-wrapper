@@ -156,7 +156,8 @@ EOF
     mkdir -p "$glm_sessions_dir"
 
     # Generate unique session ID based on timestamp and PID
-    local session_id="glm-$(date +%s)-$$"
+    local session_id
+    session_id="glm-$(date +%s)-$$"
     local session_settings="$glm_sessions_dir/$session_id.json"
 
     # Copy base GLM settings if available, otherwise use default settings
