@@ -219,6 +219,10 @@ claude-by-glm [arguments]
 
 # If PATH is not configured
 ~/.claude-glm-mcp/bin/claude-by-glm [arguments]
+
+# Check versions
+claude-by-glm --version        # Claude Code version
+claude-by-glm --glm-version    # GLM MCP Wrapper version
 ```
 
 ### How It Works
@@ -276,6 +280,15 @@ The updater:
 - Creates a backup before updating
 - Preserves your configuration and credentials
 - Shows what will be updated before proceeding
+
+**Note**: If the installed `glm-update` script is outdated and produces syntax errors (e.g., `syntax error near unexpected token '('`), run the update script directly from the project directory:
+
+```bash
+# From the project directory
+./bin/glm-update --force
+```
+
+This uses the newer version of the script to update the installation.
 
 ### Clean Up Old Sessions
 

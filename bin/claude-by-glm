@@ -87,8 +87,24 @@ load_mcp_config() {
     fi
 }
 
+# Show GLM MCP Wrapper version
+show_glm_version() {
+    local version_file="$PROJECT_DIR/VERSION"
+    local version="unknown"
+    if [[ -f "$version_file" ]]; then
+        version="$(cat "$version_file" 2>/dev/null)"
+    fi
+    echo "claude-by-glm (GLM MCP Wrapper) version $version"
+    exit 0
+}
+
 # Main execution
 main() {
+    # Handle --glm-version flag
+    if [[ "${1:-}" == "--glm-version" ]]; then
+        show_glm_version
+    fi
+
     # Windows special handling
     if [[ "$CREDENTIAL_PLATFORM" == "windows" ]]; then
         if [[ -z "${ZAI_API_KEY:-}" ]]; then

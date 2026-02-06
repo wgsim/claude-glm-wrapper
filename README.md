@@ -36,6 +36,10 @@ echo "GLM_USE_MCP=0" > ~/.claude-glm-mcp/config/mcp.conf  # Disable (more secure
 
 # Run
 claude-by-glm [arguments]
+
+# Check versions
+claude-by-glm --version        # Claude Code version
+claude-by-glm --glm-version    # GLM MCP Wrapper version
 ```
 
 ## Documentation
