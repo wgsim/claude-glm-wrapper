@@ -102,7 +102,7 @@ main() {
 
     if [[ $fetch_status -ne 0 ]] || [[ -z "$API_KEY" ]]; then
         log_error "Failed to retrieve API key from credential storage"
-        log_error "Run: ~/.glm-mcp/bin/install-key.sh"
+        log_error "Run: ~/.claude-glm-mcp/bin/install-key.sh"
         exit 1
     fi
 
@@ -117,8 +117,17 @@ main() {
 
     log_info "Starting Z.ai MCP server (platform: $CREDENTIAL_PLATFORM)..."
 
+    # Determine package version to use
+    local package_spec="@z_ai/mcp-server"
+    if [[ -n "${ZAI_MCP_VERSION:-}" ]] && [[ "$ZAI_MCP_VERSION" != "latest" ]]; then
+        package_spec="@z_ai/mcp-server@${ZAI_MCP_VERSION}"
+        log_info "Using pinned version: $ZAI_MCP_VERSION"
+    else
+        log_info "Using latest version (SECURITY WARNING: no version pinning)"
+    fi
+
     # Execute the MCP server (replaces this process)
-    exec npx -y "@z_ai/mcp-server"
+    exec npx -y "$package_spec"
 }
 
 main "$@"

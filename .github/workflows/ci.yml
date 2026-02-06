@@ -56,6 +56,16 @@ jobs:
           fi
           echo "No hardcoded API keys found"
 
+      - name: ShellCheck linting
+        run: |
+          echo "Running ShellCheck..."
+          sudo apt-get update && sudo apt-get install -y shellcheck
+          # Run shellcheck on all shell scripts (exclude sourcing warnings)
+          find . -name "*.sh" -type f -exec shellcheck --shell=bash --exclude=SC1090,SC1091 {} + || exit 1
+          # Also check scripts without .sh extension
+          shellcheck --shell=bash --exclude=SC1090,SC1091 bin/claude-by-glm bin/glm-mcp-wrapper bin/install-key.sh bin/glm-update bin/glm-cleanup-sessions || exit 1
+          echo "ShellCheck passed"
+
   verify-consistency:
     runs-on: ubuntu-latest
     steps:
@@ -77,8 +87,35 @@ jobs:
 
       - name: Verify install directory
         run: |
-          if grep -r "\.glm-mcp" . --include="*.sh" --include="*.md" --include="*.conf" 2>/dev/null; then
-            echo "ERROR: Old directory name still exists"
+          # Check for old .glm-mcp paths (should be .claude-glm-mcp)
+          echo "Checking for stale .glm-mcp/ paths..."
+          if grep -r "\.glm-mcp/" . --include="*.sh" --include="*.md" --include="*.conf" 2>/dev/null; then
+            echo "ERROR: Found old .glm-mcp/ paths (should be .claude-glm-mcp/)"
             exit 1
           fi
           echo "Install directory is consistent: .claude-glm-mcp"
+
+      - name: Check for duplicate code blocks
+        run: |
+          echo "Checking for duplicate code blocks..."
+          # Check install.sh for duplicate OS-specific notes
+          if awk '/# OS-specific notes/{c++} c>1' scripts/install.sh | grep -q "OS-specific notes"; then
+            echo "ERROR: Found duplicate OS-specific notes block in install.sh"
+            exit 1
+          fi
+          echo "No duplicate code blocks found"
+
+      - name: Verify safe config parsing
+        run: |
+          echo "Verifying safe config parsing (no 'source' on config files)..."
+          # Check that mcp.conf is not sourced as code
+          if grep -n "source.*mcp\.conf" bin/claude-by-glm 2>/dev/null; then
+            echo "ERROR: Found 'source' on mcp.conf (should use safe parsing)"
+            exit 1
+          fi
+          # Check that security.conf parsing uses grep/sed, not source
+          if grep -A5 "load_security_config" credentials/common.sh | grep -q "source.*security\.conf"; then
+            echo "ERROR: Found 'source' in load_security_config (should use safe parsing)"
+            exit 1
+          fi
+          echo "Config files are safely parsed"

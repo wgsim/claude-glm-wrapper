@@ -15,89 +15,14 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
+# Source shared utilities
+source "$PROJECT_DIR/scripts/common-utils.sh"
+
 # Source security configuration
-source "$PROJECT_DIR/credentials/security.conf" 2>/dev/null || {
-    # Fallback if security.conf not found
-    KEYCHAIN_SERVICE="z.ai-api-key"
-    KEYCHAIN_ACCOUNT="${USER:-$LOGNAME}"
-    GLM_INSTALL_DIR="${HOME}/.claude-glm-mcp"
-}
+source "$PROJECT_DIR/credentials/common.sh"
 
 # Use config value with fallback
 INSTALL_DIR="${GLM_INSTALL_DIR:-$HOME/.claude-glm-mcp}"
-
-# Colors
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m'
-
-print_error() {
-    echo -e "${RED}ERROR:${NC} $*" >&2
-}
-
-print_success() {
-    echo -e "${GREEN}SUCCESS:${NC} $*"
-}
-
-print_info() {
-    echo -e "${BLUE}INFO:${NC} $*"
-}
-
-print_step() {
-    echo -e "${YELLOW}==>${NC} $*"
-}
-
-print_warning() {
-    echo -e "${YELLOW}WARNING:${NC} $*"
-}
-
-# Detect OS
-detect_os() {
-    case "$(uname -s)" in
-        Darwin)  echo "macos" ;;
-        Linux)   echo "linux" ;;
-        MINGW*|MSYS*|CYGWIN*) echo "windows" ;;
-        *)       echo "unknown" ;;
-    esac
-}
-
-# Detect current shell
-detect_shell() {
-    if [[ -n "${ZSH_VERSION:-}" ]]; then
-        echo "zsh"
-    elif [[ -n "${BASH_VERSION:-}" ]]; then
-        echo "bash"
-    elif [[ -n "${FISH_VERSION:-}" ]]; then
-        echo "fish"
-    else
-        echo "unknown"
-    fi
-}
-
-# Get shell config file
-get_shell_config() {
-    local shell="$1"
-    case "$shell" in
-        zsh)
-            if [[ -n "$ZDOTDIR" ]]; then
-                echo "$ZDOTDIR/.zshrc"
-            else
-                echo "$HOME/.zshrc"
-            fi
-            ;;
-        bash)
-            echo "$HOME/.bashrc"
-            ;;
-        fish)
-            echo "$HOME/.config/fish/config.fish"
-            ;;
-        *)
-            return 1
-            ;;
-    esac
-}
 
 # Find trash command for current platform
 find_trash_cmd() {

@@ -14,107 +14,12 @@ set -euo pipefail
 # Configuration
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
+# Source shared utilities
+source "$PROJECT_DIR/scripts/common-utils.sh"
+
 # Source security configuration for install directory
-source "$PROJECT_DIR/credentials/security.conf" 2>/dev/null || true
+source "$PROJECT_DIR/credentials/common.sh"
 INSTALL_DIR="${GLM_INSTALL_DIR:-$HOME/.claude-glm-mcp}"
-
-# Colors
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m'
-
-print_error() {
-    echo -e "${RED}ERROR:${NC} $*" >&2
-}
-
-print_success() {
-    echo -e "${GREEN}SUCCESS:${NC} $*"
-}
-
-print_info() {
-    echo -e "${BLUE}INFO:${NC} $*"
-}
-
-print_step() {
-    echo -e "${YELLOW}==>${NC} $*"
-}
-
-print_warning() {
-    echo -e "${YELLOW}WARNING:${NC} $*"
-}
-
-# Detect OS
-detect_os() {
-    case "$(uname -s)" in
-        Darwin)  echo "macos" ;;
-        Linux)   echo "linux" ;;
-        MINGW*|MSYS*|CYGWIN*) echo "windows" ;;
-        *)       echo "unknown" ;;
-    esac
-}
-
-# Detect current shell
-detect_shell() {
-    # Check $SHELL first (user's login shell) - most reliable
-    if [[ -n "${SHELL:-}" ]]; then
-        case "$SHELL" in
-            */zsh)
-                echo "zsh"
-                return
-                ;;
-            */bash)
-                # Still check if we're actually in bash (not just SHELL pointing to bash)
-                if [[ -n "${BASH_VERSION:-}" ]]; then
-                    echo "bash"
-                    return
-                fi
-                ;;
-            */fish)
-                echo "fish"
-                return
-                ;;
-        esac
-    fi
-
-    # Fallback: check current shell version variables
-    if [[ -n "${ZSH_VERSION:-}" ]]; then
-        echo "zsh"
-        return
-    elif [[ -n "${BASH_VERSION:-}" ]]; then
-        echo "bash"
-        return
-    elif [[ -n "${FISH_VERSION:-}" ]]; then
-        echo "fish"
-        return
-    fi
-
-    echo "unknown"
-}
-
-# Get shell config file
-get_shell_config() {
-    local shell="$1"
-    case "$shell" in
-        zsh)
-            if [[ -n "${ZDOTDIR:-}" ]]; then
-                echo "${ZDOTDIR}/.zshrc"
-            else
-                echo "$HOME/.zshrc"
-            fi
-            ;;
-        bash)
-            echo "$HOME/.bashrc"
-            ;;
-        fish)
-            echo "$HOME/.config/fish/config.fish"
-            ;;
-        *)
-            return 1
-            ;;
-    esac
-}
 
 # Verify dependencies
 verify_dependencies() {
@@ -219,6 +124,7 @@ copy_files() {
     cp -f "$PROJECT_DIR/credentials/security.conf" "$INSTALL_DIR/credentials/"
     cp -f "$PROJECT_DIR/scripts/install.sh" "$INSTALL_DIR/scripts/"
     cp -f "$PROJECT_DIR/scripts/uninstall.sh" "$INSTALL_DIR/scripts/"
+    cp -f "$PROJECT_DIR/scripts/common-utils.sh" "$INSTALL_DIR/scripts/"
     # Copy completion scripts
     cp -f "$PROJECT_DIR/completion/glm-completion.bash" "$INSTALL_DIR/completion/" 2>/dev/null || true
     cp -f "$PROJECT_DIR/completion/glm-completion.zsh" "$INSTALL_DIR/completion/" 2>/dev/null || true
@@ -560,21 +466,6 @@ print_next_steps() {
             ;;
     esac
 
-    # OS-specific notes
-    case "$os" in
-        macos)
-            echo "  4. Reload your shell to use PATH changes:"
-            echo "     source ~/.zshrc   # or ~/.bashrc"
-            ;;
-        linux)
-            echo "  Note: On Linux, install-key.sh uses 'security' command."
-            echo "        For alternatives, consider secret-tool or passkey."
-            ;;
-        windows)
-            echo "  Note: Keychain not supported on Windows."
-            echo "        Use install-key.sh with direct API key input."
-            ;;
-    esac
     echo
 }
 

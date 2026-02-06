@@ -19,6 +19,9 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
+# Source shared utilities
+source "$PROJECT_DIR/scripts/common-utils.sh"
+
 # Source credential abstraction (loads security.conf)
 source "$PROJECT_DIR/credentials/common.sh"
 
@@ -27,29 +30,6 @@ if ! credential_init; then
     print_error "Failed to initialize credential backend for platform: $CREDENTIAL_PLATFORM"
     exit 1
 fi
-
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
-
-# Print colored message
-print_error() {
-    echo -e "${RED}ERROR:${NC} $*" >&2
-}
-
-print_success() {
-    echo -e "${GREEN}SUCCESS:${NC} $*"
-}
-
-print_info() {
-    echo -e "${YELLOW}INFO:${NC} $*"
-}
-
-print_warning() {
-    echo -e "${YELLOW}WARNING:${NC} $*"
-}
 
 # Validate account name format
 validate_account_name() {

@@ -15,7 +15,7 @@
 #   GLM_SKIP_PATH  - If set, skip PATH modification
 #
 # Usage:
-#   ~/.glm-mcp/bin/claude-by-glm [claude arguments...]
+#   ~/.claude-glm-mcp/bin/claude-by-glm [claude arguments...]
 #
 
 set -euo pipefail
@@ -24,43 +24,14 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
+# Source shared utilities
+source "$PROJECT_DIR/scripts/common-utils.sh"
+
 # Source credential abstraction (loads security.conf)
 source "$PROJECT_DIR/credentials/common.sh"
 
 # Initialize credential backend
 credential_init
-
-# Colors
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m'
-
-print_error() {
-    echo -e "${RED}ERROR:${NC} $*" >&2
-}
-
-print_info() {
-    echo -e "${BLUE}INFO:${NC} $*"
-}
-
-print_warning() {
-    echo -e "${YELLOW}WARNING:${NC} $*"
-}
-
-# Detect current shell
-detect_shell() {
-    if [[ -n "${ZSH_VERSION:-}" ]]; then
-        echo "zsh"
-    elif [[ -n "${BASH_VERSION:-}" ]]; then
-        echo "bash"
-    elif [[ -n "${FISH_VERSION:-}" ]]; then
-        echo "fish"
-    else
-        echo "unknown"
-    fi
-}
 
 # Fetch API key from credential storage
 fetch_api_key() {
@@ -94,16 +65,25 @@ setup_path() {
     fi
 }
 
-# Load MCP configuration from file
+# Load MCP configuration from file (safe parsing, not code execution)
 load_mcp_config() {
-    local config_file="$HOME/.glm-mcp/config/mcp.conf"
+    local config_file="$HOME/.claude-glm-mcp/config/mcp.conf"
 
     # Default: MCP enabled (more features)
     export GLM_USE_MCP="${GLM_USE_MCP:-1}"
 
-    # Load config file if exists
+    # Load config file if exists (parse as data, not code)
     if [[ -f "$config_file" ]]; then
-        source "$config_file"
+        # Extract GLM_USE_MCP value safely (grep + sed, no code execution)
+        local mcp_value
+        mcp_value=$(grep -E '^GLM_USE_MCP=' "$config_file" 2>/dev/null | tail -1 | sed 's/^GLM_USE_MCP=//' | tr -d '"'"'" | tr -d ' ')
+
+        # Validate: only accept 0 or 1
+        if [[ "$mcp_value" == "0" ]] || [[ "$mcp_value" == "1" ]]; then
+            export GLM_USE_MCP="$mcp_value"
+        elif [[ -n "$mcp_value" ]]; then
+            print_warning "Invalid GLM_USE_MCP value in $config_file: '$mcp_value' (expected 0 or 1, using default)"
+        fi
     fi
 }
 

@@ -42,22 +42,37 @@ detect_platform() {
 # Detect platform (now detect_platform is defined)
 CREDENTIAL_PLATFORM="${CREDENTIAL_PLATFORM:-$(detect_platform)}"
 
-# Load security configuration
+# Load security configuration (safe parsing, not code execution)
 # Try to load from project security.conf, with fallback defaults
 load_security_config() {
     local script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
     local config_file="$script_dir/credentials/security.conf"
 
-    # Try to source config file (may not exist in all contexts)
-    if [[ -f "$config_file" ]]; then
-        source "$config_file"
-    fi
-
-    # Fallback defaults (if config file missing or incomplete)
+    # Fallback defaults (used if config file missing or values not found)
     KEYCHAIN_SERVICE="${KEYCHAIN_SERVICE:-z.ai-api-key}"
     KEYCHAIN_ACCOUNT="${KEYCHAIN_ACCOUNT:-${USER:-${LOGNAME}}}"
     GLM_USE_MCP="${GLM_USE_MCP:-1}"
     GLM_INSTALL_DIR="${GLM_INSTALL_DIR:-${HOME}/.claude-glm-mcp}"
+    ZAI_MCP_VERSION="${ZAI_MCP_VERSION:-latest}"
+
+    # Parse config file safely (no code execution)
+    if [[ -f "$config_file" ]]; then
+        # Extract each variable safely using grep + sed
+        local service account use_mcp install_dir mcp_version
+
+        service=$(grep -E '^KEYCHAIN_SERVICE=' "$config_file" 2>/dev/null | tail -1 | sed 's/^KEYCHAIN_SERVICE=//' | tr -d '"'"'" | xargs)
+        account=$(grep -E '^KEYCHAIN_ACCOUNT=' "$config_file" 2>/dev/null | tail -1 | sed 's/^KEYCHAIN_ACCOUNT=//' | tr -d '"'"'" | xargs)
+        use_mcp=$(grep -E '^GLM_USE_MCP=' "$config_file" 2>/dev/null | tail -1 | sed 's/^GLM_USE_MCP=//' | tr -d '"'"'" | xargs)
+        install_dir=$(grep -E '^GLM_INSTALL_DIR=' "$config_file" 2>/dev/null | tail -1 | sed 's/^GLM_INSTALL_DIR=//' | tr -d '"'"'" | xargs)
+        mcp_version=$(grep -E '^ZAI_MCP_VERSION=' "$config_file" 2>/dev/null | tail -1 | sed 's/^ZAI_MCP_VERSION=//' | tr -d '"'"'" | xargs)
+
+        # Apply parsed values if valid
+        [[ -n "$service" ]] && KEYCHAIN_SERVICE="$service"
+        [[ -n "$account" ]] && KEYCHAIN_ACCOUNT="$account"
+        [[ "$use_mcp" == "0" || "$use_mcp" == "1" ]] && GLM_USE_MCP="$use_mcp"
+        [[ -n "$install_dir" ]] && GLM_INSTALL_DIR="$install_dir"
+        [[ -n "$mcp_version" ]] && ZAI_MCP_VERSION="$mcp_version"
+    fi
 }
 
 # Load configuration
@@ -68,6 +83,7 @@ export KEYCHAIN_SERVICE
 export KEYCHAIN_ACCOUNT
 export GLM_USE_MCP
 export GLM_INSTALL_DIR
+export ZAI_MCP_VERSION
 
 # Initialize credential backend
 credential_init() {
@@ -75,7 +91,7 @@ credential_init() {
 
     # Check if platform is supported
     if [[ "$platform" == "unknown" ]]; then
-        echo "ERROR: Unable to detect platform (OSTYPE=$ostype, uname=$uname_s)" >&2
+        echo "ERROR: Unable to detect platform (OSTYPE=${OSTYPE:-}, uname=$(uname -s 2>/dev/null || echo unknown))" >&2
         echo "ERROR: Please report this issue with your system information" >&2
         return 1
     fi
