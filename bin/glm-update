@@ -242,6 +242,26 @@ done
 cp "$SOURCE_DIR/VERSION" "$INSTALL_DIR/VERSION"
 chmod 600 "$INSTALL_DIR/VERSION"
 
+# Fix ownership if running with sudo
+# When script is run with sudo, copied files get root ownership
+# We need to restore ownership to the real user
+if [[ -n "${SUDO_USER:-}" ]]; then
+    print_info "Fixing file ownership to $SUDO_USER..."
+    real_user="$SUDO_USER"
+    real_group="$(id -gn "$real_user" 2>/dev/null || echo "$real_user")"
+
+    # Fix ownership of updated files
+    for file in "${files_to_copy[@]}"; do
+        target_file="$INSTALL_DIR/$file"
+        if [[ -f "$target_file" ]]; then
+            chown "$real_user:$real_group" "$target_file" 2>/dev/null || true
+        fi
+    done
+
+    # Fix VERSION ownership
+    chown "$real_user:$real_group" "$INSTALL_DIR/VERSION" 2>/dev/null || true
+fi
+
 print_success "Updated $updated file(s)"
 
 # Show completion message
