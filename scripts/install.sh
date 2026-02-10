@@ -403,9 +403,10 @@ create_glm_settings() {
     # Create settings.glm.json WITHOUT enabledPlugins
     # This allows Claude to auto-detect plugins from installed_plugins.json
     # Also set the default GLM model to prevent interference from other sessions
+    # Note: [1m]/[200k] suffix format is NOT officially supported in settings.json
     cat > "$glm_settings" << EOF
 {
-  "model": "glm-4.7[1m]",$dashboard_line
+  "model": "glm-4.7",$dashboard_line
 }
 EOF
 
