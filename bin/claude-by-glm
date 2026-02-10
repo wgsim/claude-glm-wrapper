@@ -192,7 +192,8 @@ EOF
     fi
 
     # Launch claude with all arguments
-    exec claude "$@"
+    # Force opus model to override UI state caching
+    exec claude --model opus "$@"
 }
 
 main "$@"
