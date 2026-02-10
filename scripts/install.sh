@@ -403,10 +403,10 @@ create_glm_settings() {
     # Create settings.glm.json WITHOUT enabledPlugins
     # This allows Claude to auto-detect plugins from installed_plugins.json
     # Also set the default GLM model to prevent interference from other sessions
-    # Note: [1m]/[200k] suffix format is NOT officially supported in settings.json
+    # Use "opus" alias which maps to glm-4.7 via ANTHROPIC_DEFAULT_OPUS_MODEL env var
     cat > "$glm_settings" << EOF
 {
-  "model": "glm-4.7",$dashboard_line
+  "model": "opus",$dashboard_line
 }
 EOF
 
