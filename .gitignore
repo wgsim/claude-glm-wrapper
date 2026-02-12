@@ -1,0 +1,5 @@
+# Development/monitoring tools
+bin/glm-watch-settings
+
+# Local settings (user-specific)
+.claude/settings.local.json
