@@ -1,5 +1,116 @@
+# ========================================
+# SECURITY-SENSITIVE FILES
+# ========================================
+
+# Credentials and secrets (CRITICAL - never commit)
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+*secret*
+*token*
+*password*
+api-key*
+credentials.json
+
+# Session files (may contain API keys/tokens in memory)
+*.session
+*.session.json
+*-session-*
+.last-session
+
+# Backup files (may contain sensitive config)
+*.backup
+*.backup.*
+.claude.json.backup*
+*.bak
+*.old
+*.orig
+
+# Log files (may contain sensitive data, tokens, or errors exposing system info)
+*.log
+*.log.*
+logs/
+*.pid
+
+# ========================================
+# USER-SPECIFIC FILES
+# ========================================
+
+# Local settings and overrides
+.claude/settings.local.json
+config.local.*
+*.local.json
+*.local.conf
+
 # Development/monitoring tools
 bin/glm-watch-settings
+glm-watch-settings
 
-# Local settings (user-specific)
-.claude/settings.local.json
+# ========================================
+# BUILD & RUNTIME ARTIFACTS
+# ========================================
+
+# Dependencies
+node_modules/
+venv/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Cache directories
+.cache/
+*.cache
+.pytest_cache/
+.ruff_cache/
+
+# Test artifacts
+coverage/
+.coverage
+htmlcov/
+.tox/
+test-results/
+*.test.json
+
+# ========================================
+# IDE & OS FILES
+# ========================================
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Linux
+*~
+.directory
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+*.swn
+.vim/
+.project
+.classpath
+.settings/
+
+# ========================================
+# PROJECT-SPECIFIC
+# ========================================
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+.temp/
