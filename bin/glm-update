@@ -222,7 +222,25 @@ for file in "${files_to_copy[@]}"; do
     # Create target directory if needed
     mkdir -p "$(dirname "$target_file")"
 
-    # Copy file and preserve permissions
+    # Handle existing write-protected files (chmod 500)
+    if [[ -f "$target_file" ]] && [[ ! -w "$target_file" ]]; then
+        # Try trash first
+        if ! /opt/homebrew/opt/trash/bin/trash "$target_file" 2>/dev/null; then
+            # Trash failed/unavailable, need rm - ask user
+            echo
+            print_warning "Cannot move to trash, need to delete: $file"
+            read -rp "Permanently delete and replace? (y/N): " -n 1 response
+            echo
+            if [[ ! $response =~ ^[Yy]$ ]]; then
+                print_info "Skipped: $file"
+                print_info "To manually update: cp \"$source_file\" \"$target_file\""
+                continue
+            fi
+            rm -f "$target_file"
+        fi
+    fi
+
+    # Copy file
     cp "$source_file" "$target_file"
 
     # Make executable if it's a script
