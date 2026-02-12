@@ -374,6 +374,76 @@ prompt_mcp_config() {
     echo
 }
 
+# Setup isolated CLAUDE_CONFIG_DIR for GLM sessions
+# Creates ~/.claude-glm with symlinks to shared resources and copied settings
+setup_claude_config_dir() {
+    print_step "Setting up GLM config directory (~/.claude-glm)..."
+
+    local glm_config="$HOME/.claude-glm"
+    local claude_config="$HOME/.claude"
+
+    if ! mkdir -p "$glm_config" 2>/dev/null; then
+        print_error "Failed to create GLM config directory: $glm_config"
+        print_info "Check filesystem permissions and available disk space"
+        return 1
+    fi
+
+    if ! mkdir -p "$glm_config/glm-sessions" 2>/dev/null; then
+        print_error "Failed to create sessions directory"
+        return 1
+    fi
+
+    # Symlink shared resources (only if source exists)
+    local symlink_targets=("plugins" "commands" "projects" "todos" "statsig" "CLAUDE.md")
+    for target in "${symlink_targets[@]}"; do
+        local src="$claude_config/$target"
+        local dst="$glm_config/$target"
+        if [[ -e "$src" ]] && [[ ! -e "$dst" ]]; then
+            if ! ln -s "$src" "$dst" 2>/dev/null; then
+                print_warning "Failed to symlink $target (non-critical, continuing)"
+            else
+                print_info "Symlinked: $target"
+            fi
+        elif [[ -L "$dst" ]]; then
+            # Already a symlink, verify it points correctly
+            local current_target
+            current_target="$(readlink "$dst" 2>/dev/null || true)"
+            if [[ "$current_target" != "$src" ]]; then
+                # Use ln -sf to atomically replace symlink (no rm needed)
+                ln -sf "$src" "$dst"
+                print_info "Re-linked: $target"
+            fi
+        fi
+    done
+
+    # Copy settings files (GLM-specific, not symlinked)
+    # Use settings.glm.json as source if available, otherwise copy from ~/.claude/
+    local settings_src="$claude_config/settings.glm.json"
+    if [[ ! -f "$settings_src" ]]; then
+        settings_src="$claude_config/settings.json"
+    fi
+    if [[ -f "$settings_src" ]] && [[ ! -f "$glm_config/settings.json" ]]; then
+        if ! cp "$settings_src" "$glm_config/settings.json" 2>/dev/null; then
+            print_error "Failed to copy settings.json for GLM"
+            print_info "Source: $settings_src"
+            print_info "Check filesystem permissions and available disk space"
+            return 1
+        fi
+        print_info "Copied settings.json for GLM"
+    fi
+
+    if [[ -f "$claude_config/settings.local.json" ]] && [[ ! -f "$glm_config/settings.local.json" ]]; then
+        if ! cp "$claude_config/settings.local.json" "$glm_config/settings.local.json" 2>/dev/null; then
+            print_error "Failed to copy settings.local.json for GLM"
+            print_info "Check filesystem permissions and available disk space"
+            return 1
+        fi
+        print_info "Copied settings.local.json for GLM"
+    fi
+
+    print_success "GLM config directory ready: $glm_config"
+}
+
 # Create GLM settings file
 create_glm_settings() {
     print_step "Creating GLM settings file..."
@@ -559,6 +629,9 @@ main() {
 
     # Prompt for MCP configuration
     prompt_mcp_config
+
+    # Setup isolated config directory for GLM
+    setup_claude_config_dir
 
     # Create GLM settings file
     create_glm_settings

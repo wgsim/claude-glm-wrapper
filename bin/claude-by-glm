@@ -189,9 +189,9 @@ EOF
     # Export environment variables for Z.ai GLM models
     export ANTHROPIC_AUTH_TOKEN="$api_key"
     export ANTHROPIC_BASE_URL="https://api.z.ai/api/anthropic"
-    export ANTHROPIC_DEFAULT_HAIKU_MODEL="glm-4.5-air"
-    export ANTHROPIC_DEFAULT_SONNET_MODEL="glm-4.6"
-    export ANTHROPIC_DEFAULT_OPUS_MODEL="glm-4.7"
+    export ANTHROPIC_DEFAULT_HAIKU_MODEL="glm-4.6"
+    export ANTHROPIC_DEFAULT_SONNET_MODEL="glm-4.7"
+    export ANTHROPIC_DEFAULT_OPUS_MODEL="glm-5"
 
     # Optional: Custom model repository
     if [[ -n "${GLM_MODEL_REPO:-}" ]]; then
@@ -199,10 +199,17 @@ EOF
         print_info "Using custom model repository: $GLM_MODEL_REPO"
     fi
 
-    # Create session-specific settings for isolation
-    # This prevents GLM sessions from affecting default Claude Code sessions
-    local glm_sessions_dir="$HOME/.claude/glm-sessions"
-    mkdir -p "$glm_sessions_dir"
+    # Use separate config directory to fully isolate GLM from official Claude
+    # This prevents settings.json sync issues between GLM and official sessions
+    export CLAUDE_CONFIG_DIR="$HOME/.claude-glm"
+
+    # Create session-specific settings for isolation (defense in depth)
+    local glm_sessions_dir="$CLAUDE_CONFIG_DIR/glm-sessions"
+    if ! mkdir -p "$glm_sessions_dir" 2>/dev/null; then
+        print_error "Failed to create session directory: $glm_sessions_dir"
+        print_info "Check filesystem permissions and available disk space"
+        exit 1
+    fi
 
     # Generate unique session ID based on timestamp and PID
     local session_id
@@ -210,23 +217,30 @@ EOF
     local session_settings="$glm_sessions_dir/$session_id.json"
 
     # Copy base GLM settings if available, otherwise use default settings
-    local base_settings="$HOME/.claude/settings.glm.json"
+    local base_settings="$CLAUDE_CONFIG_DIR/settings.json"
     if [[ -f "$base_settings" ]]; then
-        cp "$base_settings" "$session_settings"
+        if ! cp "$base_settings" "$session_settings" 2>/dev/null; then
+            print_error "Failed to copy GLM settings from $base_settings"
+            print_info "Check filesystem permissions and available disk space"
+            exit 1
+        fi
     else
         # Create minimal session settings if base doesn't exist
-        cat > "$session_settings" << 'EOF'
+        if ! cat > "$session_settings" << 'EOF'; then
 {
   "plugins": []
 }
 EOF
+            print_error "Failed to create session settings: $session_settings"
+            exit 1
+        fi
     fi
 
     # Export CLAUDE_SETTINGS to use session-specific config
     export CLAUDE_SETTINGS="$session_settings"
 
-    # Store session info for cleanup (optional)
-    echo "$session_id" > "$glm_sessions_dir/.last-session"
+    # Store session info for cleanup (optional, non-critical)
+    echo "$session_id" > "$glm_sessions_dir/.last-session" 2>/dev/null || true
 
     print_info "Using isolated session settings: $session_settings"
 
@@ -242,7 +256,8 @@ EOF
 
     # Launch claude with all arguments
     # Force opus model to override UI state caching
-    exec claude --model opus "$@"
+    # TERM=dumb suppresses ANSI escape codes that could pollute settings
+    exec env TERM=dumb claude --model opus "$@"
 }
 
 main "$@"

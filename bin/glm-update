@@ -282,6 +282,86 @@ fi
 
 print_success "Updated $updated file(s)"
 
+# Post-update migration for v2.0.0: setup ~/.claude-glm config directory
+post_update_migrate() {
+    # Only migrate if upgrading from pre-2.0.0
+    local prev_major
+    prev_major="$(echo "$installed_version" | cut -d. -f1)"
+
+    if [[ "$prev_major" -lt 2 ]] 2>/dev/null; then
+        print_info "Running v2.0.0 migration: setting up ~/.claude-glm..."
+
+        local glm_config="$HOME/.claude-glm"
+        local claude_config="$HOME/.claude"
+
+        if ! mkdir -p "$glm_config" 2>/dev/null; then
+            print_error "Migration failed: Cannot create $glm_config"
+            print_info "Check filesystem permissions and available disk space"
+            return 1
+        fi
+
+        if ! mkdir -p "$glm_config/glm-sessions" 2>/dev/null; then
+            print_error "Migration failed: Cannot create sessions directory"
+            return 1
+        fi
+
+        # Symlink shared resources
+        local symlink_targets=("plugins" "commands" "projects" "todos" "statsig" "CLAUDE.md")
+        for target in "${symlink_targets[@]}"; do
+            local src="$claude_config/$target"
+            local dst="$glm_config/$target"
+            if [[ -e "$src" ]] && [[ ! -e "$dst" ]]; then
+                if ! ln -s "$src" "$dst" 2>/dev/null; then
+                    print_warning "Failed to symlink $target (non-critical, continuing)"
+                fi
+            fi
+        done
+
+        # Copy settings (from settings.glm.json if available)
+        local settings_src="$claude_config/settings.glm.json"
+        if [[ ! -f "$settings_src" ]]; then
+            settings_src="$claude_config/settings.json"
+        fi
+        if [[ -f "$settings_src" ]] && [[ ! -f "$glm_config/settings.json" ]]; then
+            if ! cp "$settings_src" "$glm_config/settings.json" 2>/dev/null; then
+                print_error "Migration failed: Cannot copy settings.json"
+                print_info "Check filesystem permissions and available disk space"
+                return 1
+            fi
+        fi
+        if [[ -f "$claude_config/settings.local.json" ]] && [[ ! -f "$glm_config/settings.local.json" ]]; then
+            if ! cp "$claude_config/settings.local.json" "$glm_config/settings.local.json" 2>/dev/null; then
+                print_warning "Failed to copy settings.local.json (non-critical)"
+            fi
+        fi
+
+        # Stop running glm-watch-settings (no longer needed with config dir isolation)
+        if command -v glm-watch-settings &>/dev/null; then
+            glm-watch-settings --stop 2>/dev/null || true
+        elif [[ -x "$INSTALL_DIR/bin/glm-watch-settings" ]]; then
+            "$INSTALL_DIR/bin/glm-watch-settings" --stop 2>/dev/null || true
+        fi
+        # Also try the PID file directly
+        local pid_file="$HOME/.claude/glm-sessions/.settings-watch.pid"
+        if [[ -f "$pid_file" ]]; then
+            local pid
+            pid="$(cat "$pid_file")"
+            if kill -0 "$pid" 2>/dev/null; then
+                kill "$pid" 2>/dev/null || true
+                print_info "Stopped glm-watch-settings (PID $pid)"
+            fi
+            # Remove stale PID file (safe - not user data)
+            : > "$pid_file" 2>/dev/null || true
+        fi
+
+        print_success "v2.0.0 migration complete: ~/.claude-glm configured"
+    fi
+}
+
+if [[ $DRY_RUN -eq 0 ]]; then
+    post_update_migrate
+fi
+
 # Show completion message
 echo
 print_success "Update complete!"
