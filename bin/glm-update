@@ -132,12 +132,12 @@ if [[ "$source_version" == "$installed_version" ]] && [[ $FORCE -eq 0 ]]; then
 fi
 
 # Files to update (excluding VERSION and configs)
+# Note: glm-update is a development tool, not installed to ~/.claude-glm-mcp/bin
 FILES_TO_UPDATE=(
     "bin/glm-mcp-wrapper"
     "bin/install-key.sh"
     "bin/claude-by-glm"
     "bin/glm-cleanup-sessions"
-    "bin/glm-update"
     "credentials/common.sh"
     "credentials/macos.sh"
     "credentials/linux.sh"
