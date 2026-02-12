@@ -33,8 +33,57 @@ source "$PROJECT_DIR/credentials/common.sh"
 # Initialize credential backend
 credential_init
 
+# Check if running in SSH session
+is_ssh_session() {
+    [[ -n "${SSH_CLIENT:-}" ]] || [[ -n "${SSH_TTY:-}" ]] || [[ -n "${SSH_CONNECTION:-}" ]]
+}
+
+# Check if keychain is accessible (macOS only)
+check_keychain_accessible() {
+    if [[ "$CREDENTIAL_PLATFORM" == "macos" ]]; then
+        # Try to access keychain without verbose output
+        security find-generic-password -s "$KEYCHAIN_SERVICE" -g &>/dev/null 2>&1
+    else
+        # For non-macOS platforms, assume accessible
+        return 0
+    fi
+}
+
+# Show SSH/keychain troubleshooting help
+show_ssh_keychain_help() {
+    cat >&2 << 'EOF'
+⚠️  Keychain access issue detected in SSH session
+
+The macOS keychain appears to be locked. In SSH sessions, the keychain
+cannot display the unlock dialog that appears in GUI sessions.
+
+SOLUTION (choose one):
+
+1. Quick fix - unlock keychain now:
+   security unlock-keychain $HOME/Library/Keychains/login.keychain-db
+
+2. Permanent fix - add to ~/.zshrc or ~/.bashrc:
+   if [ -n "$SSH_CLIENT" ] || [ -n "$SSH_TTY" ]; then
+       security unlock-keychain $HOME/Library/Keychains/login.keychain-db 2>/dev/null || true
+   fi
+
+3. Alternative - disable keychain auto-lock:
+   Open "Keychain Access" app → Select "login" → Edit → Change Settings for Keychain "login"
+   Uncheck "Lock after X minutes of inactivity"
+
+EOF
+}
+
 # Fetch API key from credential storage
 fetch_api_key() {
+    # Check SSH session and keychain access first (macOS)
+    if is_ssh_session && [[ "$CREDENTIAL_PLATFORM" == "macos" ]]; then
+        if ! check_keychain_accessible; then
+            show_ssh_keychain_help
+            return 1
+        fi
+    fi
+
     local api_key
     api_key="$(credential_fetch "$KEYCHAIN_SERVICE" "$KEYCHAIN_ACCOUNT" 2>/dev/null)" || return 1
 
