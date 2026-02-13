@@ -21,6 +21,52 @@ source "$PROJECT_DIR/scripts/common-utils.sh"
 source "$PROJECT_DIR/credentials/common.sh"
 INSTALL_DIR="${GLM_INSTALL_DIR:-$HOME/.claude-glm-mcp}"
 
+# Validate installation directory for safety
+validate_install_dir() {
+    local raw="$1"
+
+    # Must not be empty
+    if [[ -z "$raw" ]]; then
+        print_error "INSTALL_DIR is empty"
+        return 1
+    fi
+
+    # Must be absolute path
+    if [[ "$raw" != /* ]]; then
+        print_error "INSTALL_DIR must be absolute path: $raw"
+        return 1
+    fi
+
+    # Canonicalize if realpath available
+    local canonical_dir
+    if command -v realpath &>/dev/null; then
+        canonical_dir="$(realpath -m "$raw")" || {
+            print_error "Cannot resolve INSTALL_DIR: $raw"
+            return 1
+        }
+    else
+        canonical_dir="$raw"
+    fi
+
+    # Reject unsafe directories
+    local canonical_home
+    canonical_home="$(cd "$HOME" && pwd)"
+
+    case "$canonical_dir" in
+        ""|"/"|"/bin"|"/usr"|"/usr/bin"|"/usr/local"|"/etc"|"/var"|"$canonical_home")
+            print_error "Refusing unsafe INSTALL_DIR: $canonical_dir"
+            print_error "Cannot install to system directories or HOME root"
+            return 1
+            ;;
+    esac
+
+    # Update INSTALL_DIR with canonical path
+    INSTALL_DIR="$canonical_dir"
+    return 0
+}
+
+validate_install_dir "$INSTALL_DIR" || exit 1
+
 # Verify dependencies
 verify_dependencies() {
     print_step "Verifying dependencies..."

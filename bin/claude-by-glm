@@ -20,6 +20,11 @@
 
 set -euo pipefail
 
+# Set trusted PATH immediately to prevent command injection
+# This must be done BEFORE any credential handling or external commands
+export PATH="/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/opt/homebrew/bin"
+readonly PATH
+
 # Script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
@@ -167,12 +172,9 @@ main() {
         local api_key="$ZAI_API_KEY"
     else
         # Fetch API key from credential storage
+        # Use if ! pattern to work correctly with set -e
         local api_key
-        local fetch_status
-        api_key="$(fetch_api_key)"
-        fetch_status=$?
-
-        if [[ $fetch_status -ne 0 ]] || [[ -z "$api_key" ]]; then
+        if ! api_key="$(fetch_api_key)"; then
             cat << EOF
 ERROR: Failed to retrieve Z.ai API key from $(get_credential_storage_name).
 
@@ -183,6 +185,12 @@ Please register your API key first:
 
 Or get one from: https://z.ai/subscribe?ic=EBGYZCJRYJ
 EOF
+            exit 1
+        fi
+
+        # Additional check for empty key
+        if [[ -z "$api_key" ]]; then
+            print_error "Retrieved API key is empty"
             exit 1
         fi
     fi
@@ -289,7 +297,8 @@ EOF
     esac
 
     # Use minimal trusted PATH to prevent PATH poisoning attacks
-    exec env -i \
+    # Don't use exec - let trap cleanup run on exit
+    env -i \
         PATH="/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/opt/homebrew/bin:$HOME/.claude-glm-mcp/bin" \
         HOME="$HOME" \
         USER="${USER:-$LOGNAME}" \
@@ -303,6 +312,9 @@ EOF
         CLAUDE_SETTINGS="$CLAUDE_SETTINGS" \
         GLM_MODE="${GLM_MODE:-}" \
         "$claude_bin" --model opus "$@"
+
+    # Capture exit code and exit with it (allows trap to run)
+    exit $?
 }
 
 main "$@"

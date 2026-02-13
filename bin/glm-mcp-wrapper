@@ -135,8 +135,33 @@ main() {
         log_info "Using latest version (SECURITY WARNING: no version pinning)"
     fi
 
-    # Execute the MCP server (replaces this process)
-    exec npx -y "$package_spec"
+    # Validate npx binary path (prevent PATH poisoning)
+    local npx_bin
+    npx_bin="$(command -v npx)" || {
+        log_error "npx not found in PATH"
+        exit 1
+    }
+
+    # Verify npx is in trusted location
+    case "$npx_bin" in
+        /usr/bin/npx|/usr/local/bin/npx|/opt/homebrew/bin/npx|"$HOME"/.nvm/*/bin/npx|"$HOME"/.volta/bin/npx)
+            log_info "Using trusted npx: $npx_bin"
+            ;;
+        *)
+            log_error "Untrusted npx path: $npx_bin"
+            log_error "Expected: /usr/bin, /usr/local/bin, /opt/homebrew/bin, or ~/.nvm/*/bin"
+            exit 1
+            ;;
+    esac
+
+    # Execute the MCP server with sanitized environment
+    # Only pass essential variables to prevent leakage
+    exec env -i \
+        PATH="/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/opt/homebrew/bin:$HOME/.nvm/versions/node/$(node --version 2>/dev/null || echo 'latest')/bin" \
+        HOME="$HOME" \
+        USER="${USER:-$LOGNAME}" \
+        ZAI_API_KEY="$ZAI_API_KEY" \
+        "$npx_bin" -y "$package_spec"
 }
 
 main "$@"
