@@ -54,6 +54,51 @@ handle_error() {
     exit 1
 }
 
+# Portable path canonicalization that works with non-existent paths
+# Works on both GNU (Linux) and BSD (macOS) systems
+# Args: $1 - path to canonicalize (may or may not exist)
+# Returns: canonical absolute path via stdout, or empty on error
+canonicalize_path() {
+    local target="$1"
+
+    # Empty path is invalid
+    [[ -n "$target" ]] || return 1
+
+    # If realpath not available, return as-is
+    if ! command -v realpath &>/dev/null; then
+        echo "$target"
+        return 0
+    fi
+
+    # If path exists, use realpath directly
+    if [[ -e "$target" ]]; then
+        realpath "$target" 2>/dev/null || return 1
+        return 0
+    fi
+
+    # Path doesn't exist - canonicalize parent + basename
+    # This is portable to both GNU and BSD realpath
+    local parent
+    local basename
+    parent="$(dirname "$target")"
+    basename="$(basename "$target")"
+
+    # Canonicalize parent directory (which should exist or be /)
+    local canonical_parent
+    if [[ "$parent" == "." ]]; then
+        canonical_parent="$(pwd)"
+    elif [[ -e "$parent" ]]; then
+        canonical_parent="$(realpath "$parent" 2>/dev/null)" || return 1
+    else
+        # Parent doesn't exist either - recursively canonicalize
+        canonical_parent="$(canonicalize_path "$parent")" || return 1
+    fi
+
+    # Combine canonical parent with basename
+    echo "${canonical_parent%/}/$basename"
+    return 0
+}
+
 # ============================================================================
 # OS Detection
 # ============================================================================

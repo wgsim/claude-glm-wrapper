@@ -287,20 +287,22 @@ EOF
     claude_bin="$(command -v claude)" || handle_error "claude binary not found in PATH"
 
     # Validate claude is in a trusted location to prevent PATH poisoning
+    # Support nvm/volta installations as well
     case "$claude_bin" in
-        /usr/bin/claude|/usr/local/bin/claude|/opt/homebrew/bin/claude|"$HOME/.claude-glm-mcp/bin/claude")
+        /usr/bin/claude|/usr/local/bin/claude|/opt/homebrew/bin/claude|"$HOME/.claude-glm-mcp/bin/claude"|"$HOME"/.nvm/*/bin/claude|"$HOME"/.volta/bin/claude)
             # Trusted path - continue
             ;;
         *)
-            handle_error "Untrusted claude path: $claude_bin (expected in /usr/bin, /usr/local/bin, /opt/homebrew/bin, or ~/.claude-glm-mcp/bin)"
+            handle_error "Untrusted claude path: $claude_bin (expected in /usr/bin, /usr/local/bin, /opt/homebrew/bin, ~/.claude-glm-mcp/bin, ~/.nvm/*/bin, or ~/.volta/bin)"
             ;;
     esac
 
     # Use minimal trusted PATH to prevent PATH poisoning attacks
     # Include claude_bin directory to support nvm/volta users
     # Don't use exec - let trap cleanup run on exit
+    # Use shell builtin to avoid command execution after secret fetch
     local claude_dir
-    claude_dir="$(dirname "$claude_bin")"
+    claude_dir="${claude_bin%/*}"
 
     env -i \
         PATH="/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/opt/homebrew/bin:$HOME/.claude-glm-mcp/bin:$claude_dir" \

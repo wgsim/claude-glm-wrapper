@@ -40,16 +40,12 @@ validate_install_dir() {
         return 1
     fi
 
-    # Canonicalize if realpath available
+    # Canonicalize path (works with non-existent paths on both GNU/BSD)
     local canonical_dir
-    if command -v realpath &>/dev/null; then
-        canonical_dir="$(realpath "$raw")" || {
-            print_error "Cannot resolve INSTALL_DIR: $raw"
-            return 1
-        }
-    else
-        canonical_dir="$raw"
-    fi
+    canonical_dir="$(canonicalize_path "$raw")" || {
+        print_error "Cannot resolve INSTALL_DIR: $raw"
+        return 1
+    }
 
     # Reject unsafe directories
     local canonical_home

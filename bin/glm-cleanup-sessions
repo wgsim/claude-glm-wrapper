@@ -117,12 +117,13 @@ EXPECTED_BASE="$HOME/.claude-glm"
 SESSIONS_DIR="${CLAUDE_CONFIG_DIR:-$EXPECTED_BASE}/glm-sessions"
 
 # Validate sessions directory is within expected location (prevent path manipulation)
+# Use portable canonicalization that works with non-existent directories
 if command -v realpath &>/dev/null; then
-    canonical_dir="$(realpath "$SESSIONS_DIR" 2>/dev/null)" || {
+    canonical_dir="$(canonicalize_path "$SESSIONS_DIR")" || {
         print_error "Cannot resolve sessions directory: $SESSIONS_DIR"
         exit 1
     }
-    canonical_expected="$(realpath "$EXPECTED_BASE/glm-sessions" 2>/dev/null)" || {
+    canonical_expected="$(canonicalize_path "$EXPECTED_BASE/glm-sessions")" || {
         print_error "Cannot resolve expected directory"
         exit 1
     }
@@ -237,9 +238,10 @@ if [[ ${#DELETE_SESSIONS[@]} -gt 0 ]]; then
         session_file="$SESSIONS_DIR/$session_id.json"
 
         # Canonicalize path and verify it's within SESSIONS_DIR
+        # Use portable canonicalization that works with non-existent files
         if command -v realpath &>/dev/null; then
-            canonical_path="$(realpath "$session_file" 2>/dev/null || echo "$session_file")"
-            canonical_dir="$(realpath "$SESSIONS_DIR" 2>/dev/null || echo "$SESSIONS_DIR")"
+            canonical_path="$(canonicalize_path "$session_file" || echo "$session_file")"
+            canonical_dir="$(canonicalize_path "$SESSIONS_DIR" || echo "$SESSIONS_DIR")"
 
             if [[ "$canonical_path" != "$canonical_dir"/* ]]; then
                 print_error "Session path outside sessions directory: $session_id"
