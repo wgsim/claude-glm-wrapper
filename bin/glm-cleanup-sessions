@@ -105,8 +105,8 @@ EOF
     esac
 done
 
-# Session directory
-SESSIONS_DIR="$HOME/.claude/glm-sessions"
+# Session directory (use CLAUDE_CONFIG_DIR for v2.0.0+)
+SESSIONS_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude-glm}/glm-sessions"
 
 # Check if sessions directory exists
 if [[ ! -d "$SESSIONS_DIR" ]]; then
@@ -159,6 +159,29 @@ if [[ $LIST_MODE -eq 1 ]]; then
     exit 0
 fi
 
+# Validate session ID to prevent path traversal
+validate_session_id() {
+    local session_id="$1"
+
+    # Remove .json extension if present
+    session_id="${session_id%.json}"
+
+    # Must match glm-TIMESTAMP-PID format
+    if [[ ! "$session_id" =~ ^glm-[0-9]+-[0-9]+$ ]]; then
+        print_error "Invalid session ID format: $session_id"
+        print_info "Expected format: glm-TIMESTAMP-PID"
+        return 1
+    fi
+
+    # Reject any path traversal attempts
+    if [[ "$session_id" =~ [./\\] ]]; then
+        print_error "Session ID contains invalid characters: $session_id"
+        return 1
+    fi
+
+    return 0
+}
+
 # Delete specific sessions mode
 if [[ ${#DELETE_SESSIONS[@]} -gt 0 ]]; then
     print_info "Deleting ${#DELETE_SESSIONS[@]} specific session(s)..."
@@ -166,10 +189,29 @@ if [[ ${#DELETE_SESSIONS[@]} -gt 0 ]]; then
     deleted=0
     not_found=0
     for session_id in "${DELETE_SESSIONS[@]}"; do
-        # Try both with and without .json extension
-        session_file="$SESSIONS_DIR/$session_id"
-        if [[ ! -f "$session_file" ]]; then
-            session_file="$SESSIONS_DIR/$session_id.json"
+        # Validate session ID format (security check)
+        if ! validate_session_id "$session_id"; then
+            print_error "Skipping invalid session ID: $session_id"
+            not_found=$((not_found + 1))
+            continue
+        fi
+
+        # Remove .json extension for consistent handling
+        session_id="${session_id%.json}"
+
+        # Construct and validate path
+        session_file="$SESSIONS_DIR/$session_id.json"
+
+        # Canonicalize path and verify it's within SESSIONS_DIR
+        if command -v realpath &>/dev/null; then
+            canonical_path="$(realpath -m "$session_file" 2>/dev/null || echo "$session_file")"
+            canonical_dir="$(realpath -m "$SESSIONS_DIR" 2>/dev/null || echo "$SESSIONS_DIR")"
+
+            if [[ "$canonical_path" != "$canonical_dir"/* ]]; then
+                print_error "Session path outside sessions directory: $session_id"
+                not_found=$((not_found + 1))
+                continue
+            fi
         fi
 
         if [[ -f "$session_file" ]]; then

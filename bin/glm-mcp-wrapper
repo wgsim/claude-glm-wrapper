@@ -59,9 +59,11 @@ fetch_api_key() {
         return 1
     fi
 
-    # Basic format validation (accepts alphanumeric plus common special chars)
-    if [[ ! "$api_key" =~ ^[a-zA-Z0-9._-]+$ ]]; then
-        log_error "Invalid API key format"
+    # Validate API key: exclude dangerous characters (aligned with install-key.sh)
+    # Allow: alphanumeric, underscore, hyphen, dot, plus, slash, equals (common API key chars)
+    # Exclude: whitespace, quotes, backticks, shell metacharacters
+    if [[ "$api_key" =~ [[:space:]] ]] || [[ "$api_key" =~ [\"\'\`\|\<\>\&\$\\\(] ]]; then
+        log_error "Invalid API key format: contains dangerous characters"
         return 1
     fi
 

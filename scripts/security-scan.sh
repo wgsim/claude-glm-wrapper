@@ -68,6 +68,8 @@ echo -e "${BLUE}Security Scan - $(date)${NC}"
 echo -e "${BLUE}========================================${NC}"
 echo ""
 
+scan_exit_code=0
+
 case "$SCAN_TYPE" in
     full)
         echo -e "${YELLOW}🔍 Scanning entire git history...${NC}"
@@ -76,6 +78,7 @@ case "$SCAN_TYPE" in
         if [[ "$GENERATE_REPORT" == true ]]; then
             REPORT_FILE="security-scan-$(date +%Y%m%d-%H%M%S).json"
             gitleaks detect --verbose --report-path="$REPORT_FILE"
+            scan_exit_code=$?
 
             if [[ -f "$REPORT_FILE" ]]; then
                 echo ""
@@ -93,6 +96,7 @@ case "$SCAN_TYPE" in
             fi
         else
             gitleaks detect --verbose
+            scan_exit_code=$?
         fi
         ;;
 
@@ -100,12 +104,13 @@ case "$SCAN_TYPE" in
         echo -e "${YELLOW}🔍 Scanning staged changes...${NC}"
         echo ""
         gitleaks protect --staged --verbose
+        scan_exit_code=$?
         ;;
 esac
 
 echo ""
 
-if [[ $? -eq 0 ]]; then
+if [[ $scan_exit_code -eq 0 ]]; then
     echo -e "${GREEN}========================================${NC}"
     echo -e "${GREEN}✅ Security scan completed successfully${NC}"
     echo -e "${GREEN}========================================${NC}"

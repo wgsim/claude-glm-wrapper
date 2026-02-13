@@ -50,7 +50,11 @@ credential_store_platform() {
     # May fail if keychain password differs from login password
     security unlock-keychain &>/dev/null || true
 
-    # Delete existing entry first (service-only lookup to handle account prefixes)
+    # Delete existing entry first (try service+account, fallback to service-only)
+    security delete-generic-password \
+        -s "$service" \
+        -a "$account" \
+        &>/dev/null || \
     security delete-generic-password \
         -s "$service" \
         &>/dev/null || true
@@ -58,11 +62,12 @@ credential_store_platform() {
     # Add new entry (no -t option, use defaults)
     # Note: -a "$account" may be modified by macOS on org-managed devices
     # We use service-only lookup for retrieval to handle this
+    # Security: Pass password via stdin to avoid process list exposure
     local output
-    output=$(security add-generic-password \
+    output=$(printf "%s" "$password" | security add-generic-password \
         -a "$account" \
         -s "$service" \
-        -w "$password" \
+        -w \
         -D "GLM API Key" \
         -j "Stored by claude-glm-wrapper" 2>&1)
 
@@ -79,12 +84,23 @@ credential_store_platform() {
 # Fetch credential from keychain
 credential_fetch_platform() {
     local service="$1"
-    local account="$2"  # Unused in lookup, but kept for interface consistency
+    local account="$2"
 
     local password
 
-    # Use service-only lookup to handle account name prefixes
-    # macOS Keychain may modify account names on org-managed devices (e.g., "Domain\user")
+    # Try service+account match first (most specific)
+    password="$(security find-generic-password \
+        -s "$service" \
+        -a "$account" \
+        -w 2>/dev/null)" && {
+        if [[ -n "$password" ]]; then
+            echo "$password"
+            return 0
+        fi
+    }
+
+    # Fallback: service-only lookup for org-managed devices
+    # macOS Keychain may modify account names (e.g., "Domain\user")
     password="$(security find-generic-password \
         -s "$service" \
         -w 2>/dev/null)" || return 1
@@ -100,13 +116,22 @@ credential_fetch_platform() {
 # Delete credential from keychain
 credential_delete_platform() {
     local service="$1"
-    local account="$2"  # Unused in lookup, but kept for interface consistency
+    local account="$2"
 
-    # Use service-only lookup to handle account name prefixes
+    # Try service+account match first (most specific)
+    if security delete-generic-password \
+        -s "$service" \
+        -a "$account" \
+        &>/dev/null; then
+        log_info "Credential deleted for service: $service, account: $account"
+        return 0
+    fi
+
+    # Fallback: service-only lookup for org-managed devices
     if security delete-generic-password \
         -s "$service" \
         &>/dev/null; then
-        log_info "Credential deleted for service: $service"
+        log_info "Credential deleted for service: $service (service-only match)"
         return 0
     fi
 

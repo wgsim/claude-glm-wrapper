@@ -62,15 +62,26 @@ load_security_config() {
         # Extract each variable safely using grep + sed
         local service account use_mcp install_dir mcp_version
 
-        service=$(grep -E '^KEYCHAIN_SERVICE=' "$config_file" 2>/dev/null | tail -1 | sed 's/^KEYCHAIN_SERVICE=//' | tr -d '"'"'" | xargs)
-        account=$(grep -E '^KEYCHAIN_ACCOUNT=' "$config_file" 2>/dev/null | tail -1 | sed 's/^KEYCHAIN_ACCOUNT=//' | tr -d '"'"'" | xargs)
-        use_mcp=$(grep -E '^GLM_USE_MCP=' "$config_file" 2>/dev/null | tail -1 | sed 's/^GLM_USE_MCP=//' | tr -d '"'"'" | xargs)
-        install_dir=$(grep -E '^GLM_INSTALL_DIR=' "$config_file" 2>/dev/null | tail -1 | sed 's/^GLM_INSTALL_DIR=//' | tr -d '"'"'" | xargs)
-        mcp_version=$(grep -E '^ZAI_MCP_VERSION=' "$config_file" 2>/dev/null | tail -1 | sed 's/^ZAI_MCP_VERSION=//' | tr -d '"'"'" | xargs)
+        service=$(grep -E '^KEYCHAIN_SERVICE=' "$config_file" 2>/dev/null | tail -1 | sed 's/^KEYCHAIN_SERVICE=//' | tr -d '"'"'" | xargs -r)
+        account=$(grep -E '^KEYCHAIN_ACCOUNT=' "$config_file" 2>/dev/null | tail -1 | sed 's/^KEYCHAIN_ACCOUNT=//' | tr -d '"'"'" | xargs -r)
+        use_mcp=$(grep -E '^GLM_USE_MCP=' "$config_file" 2>/dev/null | tail -1 | sed 's/^GLM_USE_MCP=//' | tr -d '"'"'" | xargs -r)
+        install_dir=$(grep -E '^GLM_INSTALL_DIR=' "$config_file" 2>/dev/null | tail -1 | sed 's/^GLM_INSTALL_DIR=//' | tr -d '"'"'" | xargs -r)
+        mcp_version=$(grep -E '^ZAI_MCP_VERSION=' "$config_file" 2>/dev/null | tail -1 | sed 's/^ZAI_MCP_VERSION=//' | tr -d '"'"'" | xargs -r)
 
         # Apply parsed values if valid
         [[ -n "$service" ]] && KEYCHAIN_SERVICE="$service"
-        [[ -n "$account" ]] && KEYCHAIN_ACCOUNT="$account"
+
+        # Expand account if it contains shell variable syntax
+        if [[ -n "$account" ]]; then
+            # If account contains ${...}, expand it
+            if [[ "$account" == *'${'* ]] || [[ "$account" == *'$'* ]]; then
+                # Safe expansion: only USER and LOGNAME variables
+                account="${account//\$\{USER:-\$LOGNAME\}/${USER:-$LOGNAME}}"
+                account="${account//\$USER/$USER}"
+                account="${account//\$LOGNAME/$LOGNAME}"
+            fi
+            KEYCHAIN_ACCOUNT="$account"
+        fi
         [[ "$use_mcp" == "0" || "$use_mcp" == "1" ]] && GLM_USE_MCP="$use_mcp"
         [[ -n "$install_dir" ]] && GLM_INSTALL_DIR="$install_dir"
         [[ -n "$mcp_version" ]] && ZAI_MCP_VERSION="$mcp_version"

@@ -149,6 +149,9 @@ show_glm_version() {
 
 # Main execution
 main() {
+    # Set restrictive umask for security (all files/dirs created will be owner-only)
+    umask 077
+
     # Handle --glm-version flag
     if [[ "${1:-}" == "--glm-version" ]]; then
         show_glm_version
@@ -211,6 +214,9 @@ EOF
         exit 1
     fi
 
+    # Ensure restrictive permissions (700 = owner rwx only)
+    chmod 700 "$glm_sessions_dir" 2>/dev/null || true
+
     # Generate unique session ID based on timestamp and PID
     local session_id
     session_id="glm-$(date +%s)-$$"
@@ -236,6 +242,9 @@ EOF
         fi
     fi
 
+    # Ensure session file is readable only by owner (600 = owner rw only)
+    chmod 600 "$session_settings" 2>/dev/null || true
+
     # Export CLAUDE_SETTINGS to use session-specific config
     export CLAUDE_SETTINGS="$session_settings"
 
@@ -256,8 +265,24 @@ EOF
 
     # Launch claude with all arguments
     # Force opus model to override UI state caching
-    # TERM=dumb suppresses ANSI escape codes that could pollute settings
-    exec env TERM=dumb claude --model opus "$@"
+    # Security: Use env -i with allowlist to minimize environment exposure
+    #   - TERM=dumb suppresses ANSI escape codes
+    #   - Only pass essential environment variables
+    #   - API key remains exposed to Claude process (inherent to Claude Code design)
+    exec env -i \
+        PATH="$PATH" \
+        HOME="$HOME" \
+        USER="${USER:-$LOGNAME}" \
+        TERM=dumb \
+        ANTHROPIC_AUTH_TOKEN="$api_key" \
+        ANTHROPIC_BASE_URL="$ANTHROPIC_BASE_URL" \
+        ANTHROPIC_DEFAULT_HAIKU_MODEL="$ANTHROPIC_DEFAULT_HAIKU_MODEL" \
+        ANTHROPIC_DEFAULT_SONNET_MODEL="$ANTHROPIC_DEFAULT_SONNET_MODEL" \
+        ANTHROPIC_DEFAULT_OPUS_MODEL="$ANTHROPIC_DEFAULT_OPUS_MODEL" \
+        CLAUDE_CONFIG_DIR="$CLAUDE_CONFIG_DIR" \
+        CLAUDE_SETTINGS="$CLAUDE_SETTINGS" \
+        GLM_MODE="${GLM_MODE:-}" \
+        claude --model opus "$@"
 }
 
 main "$@"
