@@ -32,6 +32,14 @@ if ! command -v gitleaks &> /dev/null; then
     exit 1
 fi
 
+# Check if jq is installed (needed for --report parsing)
+if ! command -v jq &> /dev/null; then
+    echo -e "${YELLOW}⚠️  WARNING: jq is not installed (needed for report parsing)${NC}"
+    echo -e "${YELLOW}Install with: brew install jq${NC}"
+    echo -e "${YELLOW}Report generation (--report) will work, but summary will be limited${NC}"
+    echo ""
+fi
+
 # Parse arguments
 SCAN_TYPE="full"
 GENERATE_REPORT=false

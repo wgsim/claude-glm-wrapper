@@ -55,18 +55,18 @@ load_security_config() {
     KEYCHAIN_ACCOUNT="${KEYCHAIN_ACCOUNT:-${USER:-${LOGNAME}}}"
     GLM_USE_MCP="${GLM_USE_MCP:-1}"
     GLM_INSTALL_DIR="${GLM_INSTALL_DIR:-${HOME}/.claude-glm-mcp}"
-    ZAI_MCP_VERSION="${ZAI_MCP_VERSION:-latest}"
+    ZAI_MCP_VERSION="${ZAI_MCP_VERSION:-1.0.0}"
 
     # Parse config file safely (no code execution)
     if [[ -f "$config_file" ]]; then
         # Extract each variable safely using grep + sed
         local service account use_mcp install_dir mcp_version
 
-        service=$(grep -E '^KEYCHAIN_SERVICE=' "$config_file" 2>/dev/null | tail -1 | sed 's/^KEYCHAIN_SERVICE=//' | tr -d '"'"'" | xargs -r)
-        account=$(grep -E '^KEYCHAIN_ACCOUNT=' "$config_file" 2>/dev/null | tail -1 | sed 's/^KEYCHAIN_ACCOUNT=//' | tr -d '"'"'" | xargs -r)
-        use_mcp=$(grep -E '^GLM_USE_MCP=' "$config_file" 2>/dev/null | tail -1 | sed 's/^GLM_USE_MCP=//' | tr -d '"'"'" | xargs -r)
-        install_dir=$(grep -E '^GLM_INSTALL_DIR=' "$config_file" 2>/dev/null | tail -1 | sed 's/^GLM_INSTALL_DIR=//' | tr -d '"'"'" | xargs -r)
-        mcp_version=$(grep -E '^ZAI_MCP_VERSION=' "$config_file" 2>/dev/null | tail -1 | sed 's/^ZAI_MCP_VERSION=//' | tr -d '"'"'" | xargs -r)
+        service=$(grep -E '^KEYCHAIN_SERVICE=' "$config_file" 2>/dev/null | tail -1 | sed 's/^KEYCHAIN_SERVICE=//' | tr -d '"'"'" | xargs)
+        account=$(grep -E '^KEYCHAIN_ACCOUNT=' "$config_file" 2>/dev/null | tail -1 | sed 's/^KEYCHAIN_ACCOUNT=//' | tr -d '"'"'" | xargs)
+        use_mcp=$(grep -E '^GLM_USE_MCP=' "$config_file" 2>/dev/null | tail -1 | sed 's/^GLM_USE_MCP=//' | tr -d '"'"'" | xargs)
+        install_dir=$(grep -E '^GLM_INSTALL_DIR=' "$config_file" 2>/dev/null | tail -1 | sed 's/^GLM_INSTALL_DIR=//' | tr -d '"'"'" | xargs)
+        mcp_version=$(grep -E '^ZAI_MCP_VERSION=' "$config_file" 2>/dev/null | tail -1 | sed 's/^ZAI_MCP_VERSION=//' | tr -d '"'"'" | xargs)
 
         # Apply parsed values if valid
         [[ -n "$service" ]] && KEYCHAIN_SERVICE="$service"

@@ -122,6 +122,13 @@ main() {
     # Determine package version to use
     local package_spec="@z_ai/mcp-server"
     if [[ -n "${ZAI_MCP_VERSION:-}" ]] && [[ "$ZAI_MCP_VERSION" != "latest" ]]; then
+        # Validate semver format: major.minor.patch[-prerelease][+build]
+        # Examples: 1.0.0, 1.2.3-beta, 2.0.0-rc.1+build.123
+        if [[ ! "$ZAI_MCP_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)*$ ]]; then
+            log_error "Invalid ZAI_MCP_VERSION format: $ZAI_MCP_VERSION (must be semver: major.minor.patch)"
+            exit 1
+        fi
+
         package_spec="@z_ai/mcp-server@${ZAI_MCP_VERSION}"
         log_info "Using pinned version: $ZAI_MCP_VERSION"
     else

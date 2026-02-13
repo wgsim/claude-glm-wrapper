@@ -99,18 +99,26 @@ credential_fetch_platform() {
         fi
     }
 
-    # Fallback: service-only lookup for org-managed devices
+    # Fallback: service-only lookup for org-managed devices (opt-in)
     # macOS Keychain may modify account names (e.g., "Domain\user")
-    password="$(security find-generic-password \
-        -s "$service" \
-        -w 2>/dev/null)" || return 1
+    # WARNING: This can return credentials for wrong account if multiple entries exist
+    # Only enable for known managed-device scenarios via GLM_ALLOW_SERVICE_ONLY_KEYCHAIN=1
+    if [[ "${GLM_ALLOW_SERVICE_ONLY_KEYCHAIN:-0}" == "1" ]]; then
+        password="$(security find-generic-password \
+            -s "$service" \
+            -w 2>/dev/null)" || return 1
 
-    if [[ -z "$password" ]]; then
-        log_error "Retrieved password is empty"
+        if [[ -z "$password" ]]; then
+            log_error "Retrieved password is empty"
+            return 1
+        fi
+
+        echo "$password"
+        return 0
+    else
+        # Service+account match required - no fallback allowed
         return 1
     fi
-
-    echo "$password"
 }
 
 # Delete credential from keychain

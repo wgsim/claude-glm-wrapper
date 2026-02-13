@@ -215,7 +215,7 @@ EOF
     fi
 
     # Ensure restrictive permissions (700 = owner rwx only)
-    chmod 700 "$glm_sessions_dir" 2>/dev/null || true
+    chmod 700 "$glm_sessions_dir" || handle_error "Failed to set session directory permissions"
 
     # Generate unique session ID based on timestamp and PID
     local session_id
@@ -243,7 +243,7 @@ EOF
     fi
 
     # Ensure session file is readable only by owner (600 = owner rw only)
-    chmod 600 "$session_settings" 2>/dev/null || true
+    chmod 600 "$session_settings" || handle_error "Failed to set session file permissions"
 
     # Export CLAUDE_SETTINGS to use session-specific config
     export CLAUDE_SETTINGS="$session_settings"
@@ -269,8 +269,24 @@ EOF
     #   - TERM=dumb suppresses ANSI escape codes
     #   - Only pass essential environment variables
     #   - API key remains exposed to Claude process (inherent to Claude Code design)
+
+    # Resolve claude binary path and validate it's in a trusted location
+    local claude_bin
+    claude_bin="$(command -v claude)" || handle_error "claude binary not found in PATH"
+
+    # Validate claude is in a trusted location to prevent PATH poisoning
+    case "$claude_bin" in
+        /usr/bin/claude|/usr/local/bin/claude|/opt/homebrew/bin/claude|"$HOME/.claude-glm-mcp/bin/claude")
+            # Trusted path - continue
+            ;;
+        *)
+            handle_error "Untrusted claude path: $claude_bin (expected in /usr/bin, /usr/local/bin, /opt/homebrew/bin, or ~/.claude-glm-mcp/bin)"
+            ;;
+    esac
+
+    # Use minimal trusted PATH to prevent PATH poisoning attacks
     exec env -i \
-        PATH="$PATH" \
+        PATH="/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/opt/homebrew/bin:$HOME/.claude-glm-mcp/bin" \
         HOME="$HOME" \
         USER="${USER:-$LOGNAME}" \
         TERM=dumb \
@@ -282,7 +298,7 @@ EOF
         CLAUDE_CONFIG_DIR="$CLAUDE_CONFIG_DIR" \
         CLAUDE_SETTINGS="$CLAUDE_SETTINGS" \
         GLM_MODE="${GLM_MODE:-}" \
-        claude --model opus "$@"
+        "$claude_bin" --model opus "$@"
 }
 
 main "$@"

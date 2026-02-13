@@ -106,7 +106,28 @@ EOF
 done
 
 # Session directory (use CLAUDE_CONFIG_DIR for v2.0.0+)
-SESSIONS_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude-glm}/glm-sessions"
+# Pin expected base directory to prevent environment manipulation
+EXPECTED_BASE="$HOME/.claude-glm"
+SESSIONS_DIR="${CLAUDE_CONFIG_DIR:-$EXPECTED_BASE}/glm-sessions"
+
+# Validate sessions directory is within expected location (prevent path manipulation)
+if command -v realpath &>/dev/null; then
+    canonical_dir="$(realpath -m "$SESSIONS_DIR" 2>/dev/null)" || {
+        print_error "Cannot resolve sessions directory: $SESSIONS_DIR"
+        exit 1
+    }
+    canonical_expected="$(realpath -m "$EXPECTED_BASE/glm-sessions" 2>/dev/null)" || {
+        print_error "Cannot resolve expected directory"
+        exit 1
+    }
+
+    if [[ "$canonical_dir" != "$canonical_expected" ]]; then
+        print_error "Sessions directory outside expected location"
+        print_error "  Expected: $canonical_expected"
+        print_error "  Got: $canonical_dir"
+        exit 1
+    fi
+fi
 
 # Check if sessions directory exists
 if [[ ! -d "$SESSIONS_DIR" ]]; then
