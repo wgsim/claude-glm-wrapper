@@ -1,0 +1,52 @@
+# Gitleaks configuration for claude-by-glm wrapper
+# https://github.com/gitleaks/gitleaks
+
+title = "GLM MCP Wrapper Secret Scanning"
+
+# Extend default rules with project-specific patterns
+[[rules]]
+id = "zai-api-key"
+description = "Z.ai API Key"
+regex = '''(?i)(z\.?ai|zai)[-_]?api[-_]?key["\s:=]+["']?([a-zA-Z0-9]{32,})["']?'''
+tags = ["api-key", "zai"]
+severity = "CRITICAL"
+
+[[rules]]
+id = "anthropic-api-key"
+description = "Anthropic API Key"
+regex = '''(?i)(anthropic|claude)[-_]?api[-_]?key["\s:=]+["']?(sk-ant-[a-zA-Z0-9\-_]+)["']?'''
+tags = ["api-key", "anthropic"]
+severity = "CRITICAL"
+
+[[rules]]
+id = "generic-api-key"
+description = "Generic API Key"
+regex = '''(?i)api[-_]?key["\s:=]+["']?([a-zA-Z0-9]{20,})["']?'''
+tags = ["api-key", "generic"]
+severity = "HIGH"
+
+[[rules]]
+id = "jwt-token"
+description = "JWT Token"
+regex = '''eyJ[a-zA-Z0-9_-]+\.eyJ[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+'''
+tags = ["jwt", "token"]
+severity = "HIGH"
+
+# Allowlist - files that are safe to commit
+[allowlist]
+description = "Allowlist for false positives"
+paths = [
+    '''.gitleaks.toml''',
+    '''docs/gitignore-security-audit.md''',
+    '''SECURITY.md''',
+    '''README.md''',
+]
+
+# Stop words - common false positives
+stopwords = [
+    '''example''',
+    '''sample''',
+    '''test''',
+    '''demo''',
+    '''placeholder''',
+]
