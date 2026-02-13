@@ -162,6 +162,22 @@ main() {
         show_glm_version
     fi
 
+    # Resolve and validate claude binary BEFORE any secret operations
+    # This prevents command execution after credentials are in environment
+    local claude_bin
+    claude_bin="$(command -v claude)" || handle_error "claude binary not found in PATH"
+
+    # Validate claude is in a trusted location to prevent PATH poisoning
+    # Support nvm/volta installations as well
+    case "$claude_bin" in
+        /usr/bin/claude|/usr/local/bin/claude|/opt/homebrew/bin/claude|"$HOME/.claude-glm-mcp/bin/claude"|"$HOME"/.nvm/*/bin/claude|"$HOME"/.volta/bin/claude)
+            # Trusted path - continue
+            ;;
+        *)
+            handle_error "Untrusted claude path: $claude_bin (expected in /usr/bin, /usr/local/bin, /opt/homebrew/bin, ~/.claude-glm-mcp/bin, ~/.nvm/*/bin, or ~/.volta/bin)"
+            ;;
+    esac
+
     # Windows special handling
     if [[ "$CREDENTIAL_PLATFORM" == "windows" ]]; then
         if [[ -z "${ZAI_API_KEY:-}" ]]; then
@@ -227,8 +243,11 @@ EOF
     chmod 700 "$glm_sessions_dir" || handle_error "Failed to set session directory permissions"
 
     # Generate unique session ID based on timestamp and PID
+    # Use bash builtin printf to avoid command execution after credential fetch
     local session_id
-    session_id="glm-$(date +%s)-$$"
+    local timestamp
+    printf -v timestamp '%(%s)T' -1
+    session_id="glm-${timestamp}-$$"
     local session_settings="$glm_sessions_dir/$session_id.json"
 
     # Copy base GLM settings if available, otherwise use default settings
@@ -278,24 +297,9 @@ EOF
     # Launch claude with all arguments
     # Force opus model to override UI state caching
     # Security: Use env -i with allowlist to minimize environment exposure
-    #   - TERM=dumb suppresses ANSI escape codes
     #   - Only pass essential environment variables
     #   - API key remains exposed to Claude process (inherent to Claude Code design)
-
-    # Resolve claude binary path and validate it's in a trusted location
-    local claude_bin
-    claude_bin="$(command -v claude)" || handle_error "claude binary not found in PATH"
-
-    # Validate claude is in a trusted location to prevent PATH poisoning
-    # Support nvm/volta installations as well
-    case "$claude_bin" in
-        /usr/bin/claude|/usr/local/bin/claude|/opt/homebrew/bin/claude|"$HOME/.claude-glm-mcp/bin/claude"|"$HOME"/.nvm/*/bin/claude|"$HOME"/.volta/bin/claude)
-            # Trusted path - continue
-            ;;
-        *)
-            handle_error "Untrusted claude path: $claude_bin (expected in /usr/bin, /usr/local/bin, /opt/homebrew/bin, ~/.claude-glm-mcp/bin, ~/.nvm/*/bin, or ~/.volta/bin)"
-            ;;
-    esac
+    # Note: claude_bin already resolved and validated at start of main()
 
     # Use minimal trusted PATH to prevent PATH poisoning attacks
     # Include claude_bin directory to support nvm/volta users
