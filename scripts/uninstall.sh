@@ -43,7 +43,7 @@ validate_install_dir() {
     # Canonicalize if realpath available
     local canonical_dir
     if command -v realpath &>/dev/null; then
-        canonical_dir="$(realpath -m "$raw")" || {
+        canonical_dir="$(realpath "$raw")" || {
             print_error "Cannot resolve INSTALL_DIR: $raw"
             return 1
         }

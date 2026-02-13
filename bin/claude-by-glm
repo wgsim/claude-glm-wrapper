@@ -22,8 +22,8 @@ set -euo pipefail
 
 # Set trusted PATH immediately to prevent command injection
 # This must be done BEFORE any credential handling or external commands
+# Note: Not readonly because setup_path() may add project bin directory
 export PATH="/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/opt/homebrew/bin"
-readonly PATH
 
 # Script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -297,9 +297,13 @@ EOF
     esac
 
     # Use minimal trusted PATH to prevent PATH poisoning attacks
+    # Include claude_bin directory to support nvm/volta users
     # Don't use exec - let trap cleanup run on exit
+    local claude_dir
+    claude_dir="$(dirname "$claude_bin")"
+
     env -i \
-        PATH="/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/opt/homebrew/bin:$HOME/.claude-glm-mcp/bin" \
+        PATH="/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/opt/homebrew/bin:$HOME/.claude-glm-mcp/bin:$claude_dir" \
         HOME="$HOME" \
         USER="${USER:-$LOGNAME}" \
         TERM=dumb \

@@ -156,8 +156,12 @@ main() {
 
     # Execute the MCP server with sanitized environment
     # Only pass essential variables to prevent leakage
+    # Note: npx_bin already validated, so we include its directory in PATH
+    local npx_dir
+    npx_dir="$(dirname "$npx_bin")"
+
     exec env -i \
-        PATH="/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/opt/homebrew/bin:$HOME/.nvm/versions/node/$(node --version 2>/dev/null || echo 'latest')/bin" \
+        PATH="/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/opt/homebrew/bin:$npx_dir" \
         HOME="$HOME" \
         USER="${USER:-$LOGNAME}" \
         ZAI_API_KEY="$ZAI_API_KEY" \

@@ -44,7 +44,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         --keep)
             # Use ${2:-} to safely handle unbound variable under set -u
-            local keep_arg="${2:-}"
+            keep_arg="${2:-}"
             if [[ -z "$keep_arg" ]] || [[ ! "$keep_arg" =~ ^[0-9]+$ ]] || [[ "$keep_arg" -le 0 ]]; then
                 print_error "Invalid --keep value: '${keep_arg:-<missing>}' (must be a positive integer)"
                 exit 1
@@ -118,11 +118,11 @@ SESSIONS_DIR="${CLAUDE_CONFIG_DIR:-$EXPECTED_BASE}/glm-sessions"
 
 # Validate sessions directory is within expected location (prevent path manipulation)
 if command -v realpath &>/dev/null; then
-    canonical_dir="$(realpath -m "$SESSIONS_DIR" 2>/dev/null)" || {
+    canonical_dir="$(realpath "$SESSIONS_DIR" 2>/dev/null)" || {
         print_error "Cannot resolve sessions directory: $SESSIONS_DIR"
         exit 1
     }
-    canonical_expected="$(realpath -m "$EXPECTED_BASE/glm-sessions" 2>/dev/null)" || {
+    canonical_expected="$(realpath "$EXPECTED_BASE/glm-sessions" 2>/dev/null)" || {
         print_error "Cannot resolve expected directory"
         exit 1
     }
@@ -238,8 +238,8 @@ if [[ ${#DELETE_SESSIONS[@]} -gt 0 ]]; then
 
         # Canonicalize path and verify it's within SESSIONS_DIR
         if command -v realpath &>/dev/null; then
-            canonical_path="$(realpath -m "$session_file" 2>/dev/null || echo "$session_file")"
-            canonical_dir="$(realpath -m "$SESSIONS_DIR" 2>/dev/null || echo "$SESSIONS_DIR")"
+            canonical_path="$(realpath "$session_file" 2>/dev/null || echo "$session_file")"
+            canonical_dir="$(realpath "$SESSIONS_DIR" 2>/dev/null || echo "$SESSIONS_DIR")"
 
             if [[ "$canonical_path" != "$canonical_dir"/* ]]; then
                 print_error "Session path outside sessions directory: $session_id"
