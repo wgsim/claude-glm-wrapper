@@ -127,6 +127,13 @@ if command -v realpath &>/dev/null; then
         print_error "  Got: $canonical_dir"
         exit 1
     fi
+else
+    # Fallback: fail-closed if realpath not available and path differs from expected
+    if [[ "$SESSIONS_DIR" != "$EXPECTED_BASE/glm-sessions" ]]; then
+        print_error "Cannot verify sessions directory without realpath command"
+        print_error "Install coreutils: brew install coreutils"
+        exit 1
+    fi
 fi
 
 # Check if sessions directory exists
@@ -142,9 +149,9 @@ if [[ $LIST_MODE -eq 1 ]]; then
 
     # Get all session files sorted by modification time (newest first)
     session_files=()
-    while IFS= read -r -d '' file; do
+    while IFS= read -r file; do
         [[ -n "$file" ]] && session_files+=("$file")
-    done < <(find "$SESSIONS_DIR" -name "glm-*.json" -type f -print0 2>/dev/null | xargs -0 ls -lt 2>/dev/null | awk '{print $NF}')
+    done < <(find "$SESSIONS_DIR" -name "glm-*.json" -type f -print0 2>/dev/null | xargs -0 ls -t 2>/dev/null)
 
     if [[ ${#session_files[@]} -eq 0 ]]; then
         print_info "No session files found"
@@ -291,9 +298,9 @@ fi
 # Normal mode: keep last N sessions
 # Find all session files sorted by modification time (newest first)
 session_files=()
-while IFS= read -r -d '' file; do
+while IFS= read -r file; do
     [[ -n "$file" ]] && session_files+=("$file")
-done < <(find "$SESSIONS_DIR" -name "glm-*.json" -type f -print0 2>/dev/null | xargs -0 ls -lt 2>/dev/null | awk '{print $NF}')
+done < <(find "$SESSIONS_DIR" -name "glm-*.json" -type f -print0 2>/dev/null | xargs -0 ls -t 2>/dev/null)
 
 # Calculate how many to delete
 if [[ ${#session_files[@]} -le $KEEP_COUNT ]]; then

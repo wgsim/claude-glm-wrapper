@@ -187,15 +187,16 @@ configure_completion() {
     read -rp "Choose [1/2]: " -n 1 -r
     echo
 
+    # Detect shell once for both options (fixes scope issue)
+    local shell
+    local shell_config
+    local completion_file
+
+    shell="$(detect_shell)"
+    shell_config="$(get_shell_config "$shell")"
+
     case "$REPLY" in
         1)
-            local shell
-            local shell_config
-            local completion_file
-
-            shell="$(detect_shell)"
-            shell_config="$(get_shell_config "$shell")"
-
             if [[ -z "$shell_config" ]]; then
                 print_error "Could not determine shell config file"
                 print_info "Please manually add completion to your shell config"

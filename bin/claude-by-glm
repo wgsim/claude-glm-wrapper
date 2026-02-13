@@ -168,8 +168,9 @@ main() {
     else
         # Fetch API key from credential storage
         local api_key
+        local fetch_status
         api_key="$(fetch_api_key)"
-        local fetch_status=$?
+        fetch_status=$?
 
         if [[ $fetch_status -ne 0 ]] || [[ -z "$api_key" ]]; then
             cat << EOF
