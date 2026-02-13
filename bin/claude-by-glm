@@ -178,6 +178,10 @@ main() {
             ;;
     esac
 
+    # Load MCP configuration BEFORE credential operations
+    # This function uses command substitution (grep|tail|sed|tr) so must run before secrets
+    load_mcp_config
+
     # Windows special handling
     if [[ "$CREDENTIAL_PLATFORM" == "windows" ]]; then
         if [[ -z "${ZAI_API_KEY:-}" ]]; then
@@ -243,10 +247,20 @@ EOF
     chmod 700 "$glm_sessions_dir" || handle_error "Failed to set session directory permissions"
 
     # Generate unique session ID based on timestamp and PID
-    # Use bash builtin printf to avoid command execution after credential fetch
+    # Use bash builtin if available (4.2+), otherwise use absolute path to date
     local session_id
     local timestamp
-    printf -v timestamp '%(%s)T' -1
+
+    # Check bash version for printf %()T support (requires 4.2+)
+    if [[ ${BASH_VERSINFO[0]} -gt 4 ]] || [[ ${BASH_VERSINFO[0]} -eq 4 && ${BASH_VERSINFO[1]} -ge 2 ]]; then
+        # Bash 4.2+: Use builtin printf (no external command)
+        printf -v timestamp '%(%s)T' -1
+    else
+        # Bash < 4.2 (e.g., macOS default /bin/bash 3.2): Use absolute path to date
+        # Absolute path prevents PATH poisoning
+        timestamp=$(/bin/date +%s)
+    fi
+
     session_id="glm-${timestamp}-$$"
     local session_settings="$glm_sessions_dir/$session_id.json"
 
@@ -284,10 +298,8 @@ EOF
 
     print_info "Using isolated session settings: $session_settings"
 
-    # Load MCP configuration
-    load_mcp_config
-
     # Activate GLM mode for MCP wrapper (only if MCP is enabled)
+    # Note: MCP config already loaded at start of main()
     if [[ "$GLM_USE_MCP" == "1" ]]; then
         export GLM_MODE=1
     else
