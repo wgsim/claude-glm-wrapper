@@ -80,7 +80,9 @@ move_to_trash() {
             ;;
         "windows")
             # Windows: PowerShell to move to Recycle Bin
-            powershell.exe -Command "Add-Type -AssemblyName Microsoft.VisualBasic; [Microsoft.VisualBasic.FileIO.FileSystem]::DeleteFile('$target', 'OnlyErrorDialogs', 'SendToRecycleBin')" 2>/dev/null || rm -rf "$target"
+            # Escape single quotes for PowerShell (single quote becomes two single quotes)
+            local safe_target="${target//\'/\'\'}"
+            powershell.exe -Command "Add-Type -AssemblyName Microsoft.VisualBasic; [Microsoft.VisualBasic.FileIO.FileSystem]::DeleteFile('$safe_target', 'OnlyErrorDialogs', 'SendToRecycleBin')" 2>/dev/null || rm -rf "$target"
             ;;
         *)
             return 1

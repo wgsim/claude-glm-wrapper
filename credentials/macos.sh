@@ -94,7 +94,7 @@ credential_fetch_platform() {
         -a "$account" \
         -w 2>/dev/null)" && {
         if [[ -n "$password" ]]; then
-            echo "$password"
+            printf '%s' "$password"
             return 0
         fi
     }
@@ -113,7 +113,7 @@ credential_fetch_platform() {
             return 1
         fi
 
-        echo "$password"
+        printf '%s' "$password"
         return 0
     else
         # Service+account match required - no fallback allowed
@@ -135,12 +135,15 @@ credential_delete_platform() {
         return 0
     fi
 
-    # Fallback: service-only lookup for org-managed devices
-    if security delete-generic-password \
-        -s "$service" \
-        &>/dev/null; then
-        log_info "Credential deleted for service: $service (service-only match)"
-        return 0
+    # Fallback: service-only delete for org-managed devices (opt-in)
+    # Only enable if GLM_ALLOW_SERVICE_ONLY_KEYCHAIN=1 to prevent deleting wrong credentials
+    if [[ "${GLM_ALLOW_SERVICE_ONLY_KEYCHAIN:-0}" == "1" ]]; then
+        if security delete-generic-password \
+            -s "$service" \
+            &>/dev/null; then
+            log_info "Credential deleted for service: $service (service-only match)"
+            return 0
+        fi
     fi
 
     log_info "Credential not found (may not exist): $service"

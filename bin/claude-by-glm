@@ -249,6 +249,9 @@ EOF
     # Export CLAUDE_SETTINGS to use session-specific config
     export CLAUDE_SETTINGS="$session_settings"
 
+    # Setup automatic cleanup of session file on exit
+    trap 'rm -f "$session_settings" 2>/dev/null' EXIT
+
     # Store session info for cleanup (optional, non-critical)
     echo "$session_id" > "$glm_sessions_dir/.last-session" 2>/dev/null || true
 

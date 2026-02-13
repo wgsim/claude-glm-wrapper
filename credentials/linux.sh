@@ -69,7 +69,7 @@ credential_fetch_platform() {
         return 1
     fi
 
-    echo "$password"
+    printf '%s' "$password"
 }
 
 # Delete credential using secret-tool
