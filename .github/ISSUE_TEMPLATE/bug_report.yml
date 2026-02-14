@@ -1,0 +1,142 @@
+name: Bug Report
+description: Report a bug or unexpected behavior
+title: "[Bug]: "
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug! Please fill out the information below to help us investigate.
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Preflight Checklist
+      description: Please ensure you've completed all of the following
+      options:
+        - label: I have searched existing issues to ensure this bug hasn't been reported
+          required: true
+        - label: I have read the [Troubleshooting Guide](https://github.com/wgsim/claude-glm-wrapper/blob/main/TROUBLESHOOTING.md)
+          required: true
+        - label: I am using the latest version of claude-glm-wrapper
+          required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: "Output of `claude-by-glm --glm-version`"
+      placeholder: "e.g., 2.0.13"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      description: Which operating system are you using?
+      options:
+        - macOS
+        - Linux (Ubuntu/Debian)
+        - Linux (Fedora/RHEL)
+        - Linux (Arch)
+        - Linux (Other)
+        - Windows (WSL)
+        - Windows (Native)
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of what the bug is
+      placeholder: "When I run X, Y happens instead of Z..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: Detailed steps to reproduce the behavior
+      placeholder: |
+        1. Run command '...'
+        2. See error '...'
+        3. Expected '...' but got '...'
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to happen?
+      placeholder: "I expected the command to..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      description: What actually happened? Include error messages if applicable
+      placeholder: "Instead, it..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: |
+        If applicable, paste relevant logs or error output.
+        **IMPORTANT**: Remove any API keys or sensitive information!
+      render: shell
+      placeholder: |
+        $ claude-by-glm
+        [Paste output here]
+
+  - type: textarea
+    id: config
+    attributes:
+      label: Configuration
+      description: |
+        Relevant configuration (remove sensitive values like API keys!)
+      render: shell
+      placeholder: |
+        # MCP config
+        $ cat ~/.claude-glm-mcp/config/mcp.conf
+        GLM_USE_MCP=1
+
+        # Platform info
+        $ uname -a
+
+  - type: dropdown
+    id: credential-storage
+    attributes:
+      label: Credential Storage
+      description: How are you storing your API key?
+      options:
+        - macOS Keychain
+        - Linux libsecret
+        - Windows Environment Variable
+        - Other
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: security
+    attributes:
+      label: Security
+      description: Security-related checks
+      options:
+        - label: This bug report does NOT contain API keys or sensitive information
+          required: true
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Add any other context about the problem here
+      placeholder: "This started happening after..."

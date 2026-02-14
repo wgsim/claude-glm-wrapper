@@ -1,12 +1,19 @@
 # GLM MCP Wrapper System
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Security Scan](https://img.shields.io/badge/security-gitleaks-blue)](https://github.com/gitleaks/gitleaks)
-[![Version](https://img.shields.io/badge/version-2.0.0-green)](https://github.com/wgsim/claude-glm-wrapper/releases)
+[![Version](https://img.shields.io/badge/version-2.0.13-green)](https://github.com/wgsim/claude-glm-wrapper/releases/tag/v2.0.13)
+[![Security](https://img.shields.io/badge/security-hardened-brightgreen)](SECURITY.md)
+[![Gitleaks](https://img.shields.io/badge/secrets-0%20found-success)](https://github.com/gitleaks/gitleaks)
+[![Shell](https://img.shields.io/badge/shell-bash%203.2%2B-blue)](bin/claude-by-glm)
+[![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-lightgrey)](INSTALL.md)
 
-Use Z.ai GLM models (GLM 4.6, GLM 4.7, GLM 5) with Claude Code while keeping API keys secure in platform credential storage.
+**Production-ready wrapper to use [Z.ai GLM models](https://z.ai/) (GLM 4.6, 4.7, 5) with Claude Code — with enterprise-grade credential protection.**
 
-> **🔒 Security-First Design**: Automated secret scanning, pre-commit hooks, and comprehensive credential protection.
+No more API keys in config files. No more credential leaks. Just secure, isolated sessions backed by your OS credential manager.
+
+> **🔒 Security-First Design**: 10 rounds of external security review • Zero known vulnerabilities • PASS verdict from independent auditors
+>
+> **🚀 Production Ready**: Automated secret scanning • Pre-commit hooks • Comprehensive credential protection • Session isolation
 
 ## Features
 

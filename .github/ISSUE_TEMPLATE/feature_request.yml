@@ -1,0 +1,113 @@
+name: Feature Request
+description: Suggest a new feature or enhancement
+title: "[Feature]: "
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting a feature! We appreciate your input to make claude-glm-wrapper better.
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Preflight Checklist
+      description: Please ensure you've completed all of the following
+      options:
+        - label: I have searched existing issues to ensure this hasn't been requested
+          required: true
+        - label: I have checked the [ROADMAP](https://github.com/wgsim/claude-glm-wrapper/blob/main/ROADMAP.md) to see if this is already planned
+          required: true
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Feature Category
+      description: What type of feature is this?
+      options:
+        - Security Enhancement
+        - New Platform Support
+        - MCP Functionality
+        - Developer Experience
+        - Documentation
+        - Performance Optimization
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement
+      description: What problem does this feature solve? Is your feature request related to a problem?
+      placeholder: "I'm always frustrated when..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: How would you like this feature to work? Be specific.
+      placeholder: "I'd like to be able to..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Have you considered any alternative solutions or workarounds?
+      placeholder: "I've tried X, but it doesn't work because..."
+
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Use Case
+      description: Describe a specific use case or scenario where this would be helpful
+      placeholder: "When I'm working on X, I need to Y, so this feature would help by..."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: impact
+    attributes:
+      label: Expected Impact
+      description: How many users do you think would benefit from this feature?
+      options:
+        - Most users (common use case)
+        - Many users (frequent scenario)
+        - Some users (specific scenario)
+        - Few users (edge case)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: How important is this feature to you?
+      options:
+        - Critical (blocking my workflow)
+        - High (significant improvement)
+        - Medium (nice to have)
+        - Low (minor enhancement)
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      description: Would you be willing to contribute to implementing this feature?
+      options:
+        - label: I would be willing to submit a PR for this feature
+        - label: I can help with testing
+        - label: I can help with documentation
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Add any other context, screenshots, or examples about the feature request
+      placeholder: "Here's a mockup of how it could work..."

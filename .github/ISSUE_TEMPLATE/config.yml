@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security Vulnerability
+    url: https://github.com/wgsim/claude-glm-wrapper/security/advisories/new
+    about: Please report security vulnerabilities through GitHub Security Advisories (private disclosure)
+  - name: Questions & Discussions
+    url: https://github.com/wgsim/claude-glm-wrapper/discussions
+    about: Ask questions, share ideas, or discuss the project with the community
+  - name: Troubleshooting Guide
+    url: https://github.com/wgsim/claude-glm-wrapper/blob/main/TROUBLESHOOTING.md
+    about: Check the troubleshooting guide for common issues and solutions

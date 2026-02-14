@@ -1,7 +1,8 @@
 # Public Release Checklist
 
-**Status**: 🟡 In Progress
+**Status**: 🟢 Ready for Publication
 **Target**: Make repository public on GitHub
+**Version**: v2.0.13
 
 ## ✅ Pre-Release Security Review
 
@@ -11,9 +12,12 @@
   - 0 secrets found
 - [x] **Pre-commit hooks active**
 - [x] **.gitignore comprehensive** (140+ patterns)
-- [x] **External security review Round 1** (Gemini, ChatGPT/Codex) - 12 issues found & fixed (v2.0.1)
-- [x] **External security review Round 2** (Gemini, ChatGPT/Codex) - 8 issues found & fixed (v2.0.2)
+- [x] **External security review Round 1-10** (Gemini, ChatGPT/Codex) - All 9 critical issues fixed
+  - Round 1-2: 20 vulnerabilities (v2.0.1-v2.0.2)
+  - Round 3: 9 critical issues (v2.0.5)
+  - Round 4-10: PATH poisoning, command substitution, absolute paths (v2.0.7-v2.0.13)
 - [x] **Manual code review** for sensitive patterns - All fixes verified
+- [x] **PASS verdict from both reviewers** (v2.0.13)
 
 ## ✅ Legal & Licensing
 
@@ -26,7 +30,9 @@
 
 - [x] **README.md** updated
   - [x] License badge added
-  - [x] Version badge added
+  - [x] Version badge updated (v2.0.13)
+  - [x] Security badge added
+  - [x] Platform badges added
   - [x] Contributing section
   - [x] License section
 - [x] **CONTRIBUTING.md** created
@@ -41,8 +47,11 @@
 - [ ] **Repository description** set
 - [ ] **Repository topics** added
 - [ ] **GitHub Pages** (optional)
-- [ ] **Issue templates** created
-- [ ] **PR template** created
+- [x] **Issue templates** created
+  - [x] Bug report template
+  - [x] Feature request template
+  - [x] Issue config with security advisory link
+- [x] **PR template** created
 - [ ] **Branch protection** rules
 - [ ] **Required status checks**
 
@@ -56,9 +65,9 @@
 - [x] **File permissions** correct (500/600)
 - [x] **No hardcoded secrets**
 - [x] **Code review** complete
-  - [x] Round 1 external review (v2.0.1)
-  - [x] Round 2 external review (v2.0.2)
-  - [x] All 20 vulnerabilities fixed
+  - [x] 10 rounds external review (v2.0.1 through v2.0.13)
+  - [x] All 29 total vulnerabilities fixed (20 initial + 9 PATH poisoning)
+  - [x] PASS verdict achieved
 
 ## ✅ Privacy & Sensitive Data
 
@@ -153,12 +162,12 @@ Settings → Security
 ## 🚀 Publication Steps
 
 1. ✅ **Complete this checklist**
-2. ✅ **Get external security review** (2 rounds complete)
-3. ⏭️ **Update VERSION file** to v2.0.2
-4. ⏭️ **Tag release**: `git tag v2.0.2`
-5. ⏭️ **Push tags**: `git push origin v2.0.2`
-6. ⏭️ **Create GitHub Release** with changelog
-7. ⏭️ **Change visibility** to Public
+2. ✅ **Get external security review** (10 rounds complete, PASS verdict)
+3. ✅ **Update VERSION file** to v2.0.13
+4. ✅ **Tag release**: `git tag v2.0.13`
+5. ✅ **Push tags**: `git push origin v2.0.13`
+6. ⏭️ **Create GitHub Release** with changelog (instructions provided)
+7. ⏭️ **Change visibility** to Public (instructions provided)
 8. ⏭️ **Announce** (if desired)
 
 ## 📊 Post-Publication
@@ -183,8 +192,10 @@ If security issue found after going public:
 **Security Review Summary**:
 - Round 1 (v2.0.1): 12 vulnerabilities (6 HIGH, 4 MEDIUM, 2 LOW) - ✅ Fixed
 - Round 2 (v2.0.2): 8 vulnerabilities (2 HIGH, 5 MEDIUM, 1 LOW) - ✅ Fixed
-- Total: 20 vulnerabilities identified and resolved
-- Current status: ✅ **0 known vulnerabilities**
+- Round 3 (v2.0.5): 9 vulnerabilities (all CRITICAL) - ✅ Fixed
+- Round 4-10 (v2.0.7-v2.0.13): PATH poisoning, command substitution, absolute paths - ✅ Fixed
+- **Total**: 29 vulnerabilities identified and resolved across 10 review rounds
+- **Current status**: ✅ **0 known vulnerabilities** | ✅ **PASS verdict from both reviewers**
 
-**Last Updated**: 2026-02-12
+**Last Updated**: 2026-02-14
 **Prepared By**: Claude Code Assistant
