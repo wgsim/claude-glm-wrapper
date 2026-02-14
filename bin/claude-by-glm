@@ -47,7 +47,8 @@ is_ssh_session() {
 check_keychain_accessible() {
     if [[ "$CREDENTIAL_PLATFORM" == "macos" ]]; then
         # Try to access keychain without verbose output
-        security find-generic-password -s "$KEYCHAIN_SERVICE" -g &>/dev/null 2>&1
+        # Use absolute path to prevent PATH poisoning
+        /usr/bin/security find-generic-password -s "$KEYCHAIN_SERVICE" -g &>/dev/null 2>&1
     else
         # For non-macOS platforms, assume accessible
         return 0
