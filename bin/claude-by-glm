@@ -182,60 +182,16 @@ main() {
     # This function uses command substitution (grep|tail|sed|tr) so must run before secrets
     load_mcp_config
 
-    # Windows special handling
-    if [[ "$CREDENTIAL_PLATFORM" == "windows" ]]; then
-        if [[ -z "${ZAI_API_KEY:-}" ]]; then
-            print_error "ZAI_API_KEY environment variable not set"
-            print_info "Set it with: set ZAI_API_KEY=your_api_key"
-            exit 1
-        fi
-        local api_key="$ZAI_API_KEY"
-    else
-        # Fetch API key from credential storage
-        # Use if ! pattern to work correctly with set -e
-        local api_key
-        if ! api_key="$(fetch_api_key)"; then
-            cat << EOF
-ERROR: Failed to retrieve Z.ai API key from $(get_credential_storage_name).
-
-Required: service="$KEYCHAIN_SERVICE", account="$KEYCHAIN_ACCOUNT"
-
-Please register your API key first:
-  ~/.claude-glm-mcp/bin/install-key.sh
-
-Or get one from: https://z.ai/subscribe?ic=EBGYZCJRYJ
-EOF
-            exit 1
-        fi
-
-        # Additional check for empty key
-        if [[ -z "$api_key" ]]; then
-            print_error "Retrieved API key is empty"
-            exit 1
-        fi
-    fi
-
-    # Setup PATH
+    # Setup PATH BEFORE credential operations
+    # This prevents PATH poisoning after secrets enter environment
     setup_path
-
-    # Export environment variables for Z.ai GLM models
-    export ANTHROPIC_AUTH_TOKEN="$api_key"
-    export ANTHROPIC_BASE_URL="https://api.z.ai/api/anthropic"
-    export ANTHROPIC_DEFAULT_HAIKU_MODEL="glm-4.6"
-    export ANTHROPIC_DEFAULT_SONNET_MODEL="glm-4.7"
-    export ANTHROPIC_DEFAULT_OPUS_MODEL="glm-5"
-
-    # Optional: Custom model repository
-    if [[ -n "${GLM_MODEL_REPO:-}" ]]; then
-        export ANTHROPIC_MODEL_REPO="$GLM_MODEL_REPO"
-        print_info "Using custom model repository: $GLM_MODEL_REPO"
-    fi
 
     # Use separate config directory to fully isolate GLM from official Claude
     # This prevents settings.json sync issues between GLM and official sessions
     export CLAUDE_CONFIG_DIR="$HOME/.claude-glm"
 
     # Create session-specific settings for isolation (defense in depth)
+    # Do this BEFORE fetching credentials so no external commands run after secrets
     local glm_sessions_dir="$CLAUDE_CONFIG_DIR/glm-sessions"
     if ! mkdir -p "$glm_sessions_dir" 2>/dev/null; then
         print_error "Failed to create session directory: $glm_sessions_dir"
@@ -297,6 +253,53 @@ EOF
     echo "$session_id" > "$glm_sessions_dir/.last-session" 2>/dev/null || true
 
     print_info "Using isolated session settings: $session_settings"
+
+    # NOW fetch credentials - ALL external commands completed before this point
+    # Windows special handling
+    local api_key
+    if [[ "$CREDENTIAL_PLATFORM" == "windows" ]]; then
+        if [[ -z "${ZAI_API_KEY:-}" ]]; then
+            print_error "ZAI_API_KEY environment variable not set"
+            print_info "Set it with: set ZAI_API_KEY=your_api_key"
+            exit 1
+        fi
+        api_key="$ZAI_API_KEY"
+    else
+        # Fetch API key from credential storage
+        # Use if ! pattern to work correctly with set -e
+        if ! api_key="$(fetch_api_key)"; then
+            cat << EOF
+ERROR: Failed to retrieve Z.ai API key from $(get_credential_storage_name).
+
+Required: service="$KEYCHAIN_SERVICE", account="$KEYCHAIN_ACCOUNT"
+
+Please register your API key first:
+  ~/.claude-glm-mcp/bin/install-key.sh
+
+Or get one from: https://z.ai/subscribe?ic=EBGYZCJRYJ
+EOF
+            exit 1
+        fi
+
+        # Additional check for empty key
+        if [[ -z "$api_key" ]]; then
+            print_error "Retrieved API key is empty"
+            exit 1
+        fi
+    fi
+
+    # Export environment variables for Z.ai GLM models
+    export ANTHROPIC_AUTH_TOKEN="$api_key"
+    export ANTHROPIC_BASE_URL="https://api.z.ai/api/anthropic"
+    export ANTHROPIC_DEFAULT_HAIKU_MODEL="glm-4.6"
+    export ANTHROPIC_DEFAULT_SONNET_MODEL="glm-4.7"
+    export ANTHROPIC_DEFAULT_OPUS_MODEL="glm-5"
+
+    # Optional: Custom model repository
+    if [[ -n "${GLM_MODEL_REPO:-}" ]]; then
+        export ANTHROPIC_MODEL_REPO="$GLM_MODEL_REPO"
+        print_info "Using custom model repository: $GLM_MODEL_REPO"
+    fi
 
     # Activate GLM mode for MCP wrapper (only if MCP is enabled)
     # Note: MCP config already loaded at start of main()
