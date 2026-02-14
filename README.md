@@ -11,7 +11,7 @@
 
 No more API keys in config files. No more credential leaks. Just secure, isolated sessions backed by your OS credential manager.
 
-> **🔒 Security-First Design**: 10 rounds of external security review • Zero known vulnerabilities • PASS verdict from independent auditors
+> **🔒 Security-First Design**: Comprehensive security review • Zero known vulnerabilities • PASS verdict from security auditors
 >
 > **🚀 Production Ready**: Automated secret scanning • Pre-commit hooks • Comprehensive credential protection • Session isolation
 
@@ -64,38 +64,95 @@ claude-by-glm --glm-version    # GLM MCP Wrapper version
 
 ## Architecture
 
+### High-Level Flow
+
 ```
-claude-by-glm
-    ↓ (sets GLM_MODE=1)
-Claude Code reads ~/.claude.json
+User runs: claude-by-glm [arguments]
     ↓
-glm-mcp-wrapper (activated by GLM_MODE)
-    ↓ (fetches API key from keychain)
-Z.ai MCP Server
+1. Set CLAUDE_CONFIG_DIR=~/.claude-glm (session isolation)
+2. Fetch API key from platform credential storage
+   (macOS Keychain / Linux libsecret / Windows ENV)
+3. Set GLM_MODE=1 (optional MCP activation)
+4. Launch Claude Code with isolated config
+    ↓
+Claude Code reads ~/.claude.json
+    ↓ (if GLM_MODE=1 and GLM_USE_MCP=1)
+glm-mcp-wrapper
+    ↓
+Z.ai MCP Server (optional)
 ```
 
-## Installation Directory
+### Session Isolation (v2.0.0+)
+
+GLM sessions use separate config directory to prevent settings pollution:
+
+```
+Official Claude:  uses ~/.claude/
+GLM Sessions:     uses ~/.claude-glm/
+                       ↓
+                  Isolated settings, plugins, projects
+                  No interference with official Claude sessions
+```
+
+### Security Architecture (v2.0.13)
+
+```
+Security Layers:
+1. Trusted PATH (/usr/bin:/bin:/usr/sbin:/sbin)
+2. All external commands use absolute paths
+3. Session setup completes BEFORE credential fetch
+4. Credentials never exposed to user-modifiable PATH
+5. Platform credential storage (never in config files)
+6. Session cleanup on exit
+```
+
+## Directory Structure
+
+### Installation Directory (~/.claude-glm-mcp/)
+
+Where the wrapper is installed:
 
 ```
 ~/.claude-glm-mcp/
 ├── bin/
+│   ├── claude-by-glm        # Main launcher (sets up environment)
 │   ├── glm-mcp-wrapper      # MCP wrapper (GLM_MODE aware)
-│   ├── install-key.sh       # API key registration
-│   └── claude-by-glm        # Main launcher
+│   ├── install-key.sh       # API key registration utility
+│   └── glm-cleanup-sessions # Session cleanup utility
 ├── config/
-│   └── mcp.conf             # MCP configuration (GLM_USE_MCP)
+│   └── mcp.conf             # MCP configuration (GLM_USE_MCP=0/1)
 ├── credentials/
-│   ├── common.sh            # Credential abstraction layer
-│   ├── macos.sh             # macOS Keychain
-│   ├── linux.sh             # Linux libsecret
-│   ├── windows.sh           # Windows env var
-│   └── security.conf         # Centralized configuration
+│   ├── common.sh            # Platform abstraction layer
+│   ├── macos.sh             # macOS Keychain operations
+│   ├── linux.sh             # Linux libsecret operations
+│   ├── windows.sh           # Windows environment variable
+│   └── security.conf        # Credential storage configuration
 ├── scripts/
-│   ├── install.sh           # Installer
-│   └── uninstall.sh         # Uninstaller
+│   ├── common-utils.sh      # Shared utility functions
+│   ├── install.sh           # Installation script
+│   └── uninstall.sh         # Uninstallation script
 └── backups/
-    └── .claude.json.backup.*
+    └── .claude.json.backup.* # Automatic backups
 ```
+
+### Runtime Directory (~/.claude-glm/)
+
+Where GLM sessions run (v2.0.0+ session isolation):
+
+```
+~/.claude-glm/
+├── settings.json            # GLM session settings (isolated)
+├── settings.local.json      # Local overrides (isolated)
+├── glm-sessions/            # Temporary session files
+│   └── glm-<timestamp>-<pid>.json
+├── plugins/        → symlink to ~/.claude/plugins/
+├── commands/       → symlink to ~/.claude/commands/
+├── projects/       → symlink to ~/.claude/projects/
+├── todos/          → symlink to ~/.claude/todos/
+└── CLAUDE.md       → symlink to ~/.claude/CLAUDE.md
+```
+
+**Key Design**: Settings are isolated, but plugins/projects are shared via symlinks.
 
 ## Requirements
 
