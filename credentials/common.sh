@@ -74,6 +74,7 @@ load_security_config() {
         # Expand account if it contains shell variable syntax
         if [[ -n "$account" ]]; then
             # If account contains ${...}, expand it
+            # shellcheck disable=SC2016  # Intentionally matching literal ${ and $ characters
             if [[ "$account" == *'${'* ]] || [[ "$account" == *'$'* ]]; then
                 # Safe expansion: only USER and LOGNAME variables
                 account="${account//\$\{USER:-\$LOGNAME\}/${USER:-$LOGNAME}}"
