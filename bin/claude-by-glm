@@ -247,7 +247,8 @@ EOF
     export CLAUDE_SETTINGS="$session_settings"
 
     # Setup automatic cleanup of session file on exit
-    trap 'rm -f "$session_settings" 2>/dev/null' EXIT
+    # Use absolute path to prevent PATH poisoning
+    trap '/bin/rm -f "$session_settings" 2>/dev/null' EXIT
 
     # Store session info for cleanup (optional, non-critical)
     echo "$session_id" > "$glm_sessions_dir/.last-session" 2>/dev/null || true
@@ -320,10 +321,11 @@ EOF
     # Include claude_bin directory to support nvm/volta users
     # Don't use exec - let trap cleanup run on exit
     # Use shell builtin to avoid command execution after secret fetch
+    # Use absolute path for env to prevent PATH poisoning
     local claude_dir
     claude_dir="${claude_bin%/*}"
 
-    env -i \
+    /usr/bin/env -i \
         PATH="/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/opt/homebrew/bin:$HOME/.claude-glm-mcp/bin:$claude_dir" \
         HOME="$HOME" \
         USER="${USER:-$LOGNAME}" \

@@ -48,14 +48,16 @@ credential_store_platform() {
 
     # Unlock keychain for SSH/non-interactive sessions
     # May fail if keychain password differs from login password
-    security unlock-keychain &>/dev/null || true
+    # Use absolute path to prevent PATH poisoning
+    /usr/bin/security unlock-keychain &>/dev/null || true
 
     # Delete existing entry first (try service+account, fallback to service-only)
-    security delete-generic-password \
+    # Use absolute path to prevent PATH poisoning
+    /usr/bin/security delete-generic-password \
         -s "$service" \
         -a "$account" \
         &>/dev/null || \
-    security delete-generic-password \
+    /usr/bin/security delete-generic-password \
         -s "$service" \
         &>/dev/null || true
 
@@ -63,8 +65,9 @@ credential_store_platform() {
     # Note: -a "$account" may be modified by macOS on org-managed devices
     # We use service-only lookup for retrieval to handle this
     # Security: Pass password via stdin to avoid process list exposure
+    # Use absolute path to prevent PATH poisoning
     local output
-    output=$(printf "%s" "$password" | security add-generic-password \
+    output=$(printf "%s" "$password" | /usr/bin/security add-generic-password \
         -a "$account" \
         -s "$service" \
         -w \
@@ -89,7 +92,8 @@ credential_fetch_platform() {
     local password
 
     # Try service+account match first (most specific)
-    password="$(security find-generic-password \
+    # Use absolute path to prevent PATH poisoning during credential fetch
+    password="$(/usr/bin/security find-generic-password \
         -s "$service" \
         -a "$account" \
         -w 2>/dev/null)" && {
@@ -104,7 +108,8 @@ credential_fetch_platform() {
     # WARNING: This can return credentials for wrong account if multiple entries exist
     # Only enable for known managed-device scenarios via GLM_ALLOW_SERVICE_ONLY_KEYCHAIN=1
     if [[ "${GLM_ALLOW_SERVICE_ONLY_KEYCHAIN:-0}" == "1" ]]; then
-        password="$(security find-generic-password \
+        # Use absolute path to prevent PATH poisoning during credential fetch
+        password="$(/usr/bin/security find-generic-password \
             -s "$service" \
             -w 2>/dev/null)" || return 1
 
@@ -127,7 +132,8 @@ credential_delete_platform() {
     local account="$2"
 
     # Try service+account match first (most specific)
-    if security delete-generic-password \
+    # Use absolute path to prevent PATH poisoning
+    if /usr/bin/security delete-generic-password \
         -s "$service" \
         -a "$account" \
         &>/dev/null; then
@@ -138,7 +144,8 @@ credential_delete_platform() {
     # Fallback: service-only delete for org-managed devices (opt-in)
     # Only enable if GLM_ALLOW_SERVICE_ONLY_KEYCHAIN=1 to prevent deleting wrong credentials
     if [[ "${GLM_ALLOW_SERVICE_ONLY_KEYCHAIN:-0}" == "1" ]]; then
-        if security delete-generic-password \
+        # Use absolute path to prevent PATH poisoning
+        if /usr/bin/security delete-generic-password \
             -s "$service" \
             &>/dev/null; then
             log_info "Credential deleted for service: $service (service-only match)"
