@@ -187,24 +187,20 @@ main() {
     # This prevents PATH poisoning after secrets enter environment
     setup_path
 
-    # Use separate config directory to fully isolate GLM from official Claude
-    # This prevents settings.json sync issues between GLM and official sessions
-    export CLAUDE_CONFIG_DIR="$HOME/.claude-glm"
+    # ========================================================================
+    # SESSION-SPECIFIC CLAUDE_CONFIG_DIR ISOLATION
+    # ========================================================================
+    # Each GLM session gets its own CLAUDE_CONFIG_DIR to prevent:
+    # 1. Settings pollution between GLM sessions
+    # 2. Conflicts with other session isolation projects (e.g., ~/.claude-per-sessions/)
+    # 3. Model selection synchronization between concurrent sessions
+    #
+    # Directory structure:
+    #   ~/.claude-glm/                    # GLM template (shared resources)
+    #   ~/.claude-glm-sessions/<id>/      # Per-session isolated config
+    # ========================================================================
 
-    # Create session-specific settings for isolation (defense in depth)
-    # Do this BEFORE fetching credentials so no external commands run after secrets
-    local glm_sessions_dir="$CLAUDE_CONFIG_DIR/glm-sessions"
-    if ! mkdir -p "$glm_sessions_dir" 2>/dev/null; then
-        print_error "Failed to create session directory: $glm_sessions_dir"
-        print_info "Check filesystem permissions and available disk space"
-        exit 1
-    fi
-
-    # Ensure restrictive permissions (700 = owner rwx only)
-    chmod 700 "$glm_sessions_dir" || handle_error "Failed to set session directory permissions"
-
-    # Generate unique session ID based on timestamp and PID
-    # Use bash builtin if available (4.2+), otherwise use absolute path to date
+    # Generate unique session ID: glm-<timestamp>-<pid>
     local session_id
     local timestamp
 
@@ -219,42 +215,78 @@ main() {
     fi
 
     session_id="glm-${timestamp}-$$"
-    local session_settings="$glm_sessions_dir/$session_id.json"
 
-    # Copy base GLM settings if available, otherwise use default settings
-    local base_settings="$CLAUDE_CONFIG_DIR/settings.json"
-    if [[ -f "$base_settings" ]]; then
-        if ! cp "$base_settings" "$session_settings" 2>/dev/null; then
-            print_error "Failed to copy GLM settings from $base_settings"
-            print_info "Check filesystem permissions and available disk space"
-            exit 1
+    # Create session-specific config directory
+    local sessions_base="$HOME/.claude-glm-sessions"
+    local session_dir="$sessions_base/$session_id"
+
+    # Create with restrictive permissions (umask 077 = owner only)
+    if ! ( umask 077 && mkdir -p "$session_dir" ); then
+        print_error "Failed to create session directory: $session_dir"
+        print_info "Check filesystem permissions and available disk space"
+        exit 1
+    fi
+
+    # ========================================================================
+    # SYMLINK SHARED RESOURCES (read-mostly, shared across all sessions)
+    # ========================================================================
+    # These are symlinked from official Claude config to maintain consistency
+    # and avoid duplication. Updates in one session are reflected in all.
+    local shared_items=(plugins commands projects todos CLAUDE.md memory)
+    for item in "${shared_items[@]}"; do
+        if [[ -e "$HOME/.claude/$item" ]]; then
+            ln -sf "$HOME/.claude/$item" "$session_dir/$item" 2>/dev/null || \
+                print_info "Warning: Could not symlink $item"
         fi
-    else
-        # Create minimal session settings if base doesn't exist
-        if ! cat > "$session_settings" << 'EOF'; then
+    done
+
+    # ========================================================================
+    # COPY MUTABLE CONFIG (session-specific, can diverge independently)
+    # ========================================================================
+    # Copy from GLM template directory if available, otherwise create minimal
+    local glm_template="$HOME/.claude-glm"
+
+    for cfg in settings.json settings.local.json; do
+        if [[ -f "$glm_template/$cfg" ]]; then
+            # Copy from GLM template with secure permissions
+            if ! /bin/cp "$glm_template/$cfg" "$session_dir/$cfg" 2>/dev/null; then
+                print_info "Warning: Could not copy $cfg from template"
+            else
+                chmod 600 "$session_dir/$cfg" 2>/dev/null || true
+            fi
+        elif [[ -f "$HOME/.claude/$cfg" ]]; then
+            # Fallback: copy from official Claude config
+            if ! /bin/cp "$HOME/.claude/$cfg" "$session_dir/$cfg" 2>/dev/null; then
+                print_info "Warning: Could not copy $cfg from ~/.claude"
+            else
+                chmod 600 "$session_dir/$cfg" 2>/dev/null || true
+            fi
+        fi
+    done
+
+    # Ensure at least a minimal settings.json exists
+    if [[ ! -f "$session_dir/settings.json" ]]; then
+        cat > "$session_dir/settings.json" << 'EOF'
 {
   "plugins": []
 }
 EOF
-            print_error "Failed to create session settings: $session_settings"
-            exit 1
-        fi
+        chmod 600 "$session_dir/settings.json" 2>/dev/null || true
     fi
 
-    # Ensure session file is readable only by owner (600 = owner rw only)
-    chmod 600 "$session_settings" || handle_error "Failed to set session file permissions"
+    # ========================================================================
+    # SET SESSION-SPECIFIC CLAUDE_CONFIG_DIR
+    # ========================================================================
+    export CLAUDE_CONFIG_DIR="$session_dir"
 
-    # Export CLAUDE_SETTINGS to use session-specific config
-    export CLAUDE_SETTINGS="$session_settings"
+    # Store session info for debugging/cleanup utilities
+    echo "$session_id" > "$sessions_base/.last-session" 2>/dev/null || true
 
-    # Setup automatic cleanup of session file on exit
+    print_info "GLM session isolated: $session_dir"
+
+    # Setup automatic cleanup of session directory on exit
     # Use absolute path to prevent PATH poisoning
-    trap '/bin/rm -f "$session_settings" 2>/dev/null' EXIT
-
-    # Store session info for cleanup (optional, non-critical)
-    echo "$session_id" > "$glm_sessions_dir/.last-session" 2>/dev/null || true
-
-    print_info "Using isolated session settings: $session_settings"
+    trap '/bin/rm -rf "$session_dir" 2>/dev/null' EXIT
 
     # NOW fetch credentials - ALL external commands completed before this point
     # Windows special handling

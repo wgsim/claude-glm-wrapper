@@ -1,7 +1,7 @@
 # GLM MCP Wrapper System
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/version-2.0.13-green)](https://github.com/wgsim/claude-glm-wrapper/releases/tag/v2.0.13)
+[![Version](https://img.shields.io/badge/version-2.0.14-green)](https://github.com/wgsim/claude-glm-wrapper/releases)
 [![Security](https://img.shields.io/badge/security-hardened-brightgreen)](SECURITY.md)
 [![Gitleaks](https://img.shields.io/badge/secrets-0%20found-success)](https://github.com/gitleaks/gitleaks)
 [![Shell](https://img.shields.io/badge/shell-bash%203.2%2B-blue)](bin/claude-by-glm)
@@ -82,16 +82,18 @@ glm-mcp-wrapper
 Z.ai MCP Server (optional)
 ```
 
-### Session Isolation (v2.0.0+)
+### Session Isolation (v2.0.14+)
 
-GLM sessions use separate config directory to prevent settings pollution:
+Each GLM session gets its own isolated config directory:
 
 ```
-Official Claude:  uses ~/.claude/
-GLM Sessions:     uses ~/.claude-glm/
-                       ↓
-                  Isolated settings, plugins, projects
-                  No interference with official Claude sessions
+Official Claude:      uses ~/.claude/
+GLM Session 1:        uses ~/.claude-glm-sessions/glm-123-456/
+GLM Session 2:        uses ~/.claude-glm-sessions/glm-124-789/
+                              ↓
+                      Complete isolation between sessions
+                      No model selection sync issues
+                      No conflicts with other session isolation projects
 ```
 
 ### Security Architecture (v2.0.13)
@@ -135,24 +137,37 @@ Where the wrapper is installed:
     └── .claude.json.backup.* # Automatic backups
 ```
 
-### Runtime Directory (~/.claude-glm/)
+### Session Directory (~/.claude-glm-sessions/)
 
-Where GLM sessions run (v2.0.0+ session isolation):
+Where each GLM session runs (v2.0.14+ per-session isolation):
+
+```
+~/.claude-glm-sessions/
+├── .last-session                # Last session ID (for debugging)
+├── glm-<timestamp>-<pid>/       # Session 1 (auto-deleted on exit)
+│   ├── settings.json            # Session-specific settings
+│   ├── settings.local.json      # Session-specific overrides
+│   ├── plugins/   → symlink to ~/.claude/plugins/
+│   ├── commands/  → symlink to ~/.claude/commands/
+│   ├── projects/  → symlink to ~/.claude/projects/
+│   ├── todos/     → symlink to ~/.claude/todos/
+│   ├── CLAUDE.md  → symlink to ~/.claude/CLAUDE.md
+│   └── memory/    → symlink to ~/.claude/memory/
+└── glm-<timestamp2>-<pid2>/     # Session 2 (auto-deleted on exit)
+    └── ...
+```
+
+### Template Directory (~/.claude-glm/)
+
+Optional template for new GLM sessions:
 
 ```
 ~/.claude-glm/
-├── settings.json            # GLM session settings (isolated)
-├── settings.local.json      # Local overrides (isolated)
-├── glm-sessions/            # Temporary session files
-│   └── glm-<timestamp>-<pid>.json
-├── plugins/        → symlink to ~/.claude/plugins/
-├── commands/       → symlink to ~/.claude/commands/
-├── projects/       → symlink to ~/.claude/projects/
-├── todos/          → symlink to ~/.claude/todos/
-└── CLAUDE.md       → symlink to ~/.claude/CLAUDE.md
+├── settings.json        # Template settings (copied to new sessions)
+└── settings.local.json  # Template overrides (copied to new sessions)
 ```
 
-**Key Design**: Settings are isolated, but plugins/projects are shared via symlinks.
+**Key Design**: Each session gets complete CLAUDE_CONFIG_DIR isolation. Shared resources (plugins, projects) are symlinked from `~/.claude/`.
 
 ## Requirements
 
