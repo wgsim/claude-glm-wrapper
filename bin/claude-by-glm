@@ -153,6 +153,97 @@ show_glm_version() {
     exit 0
 }
 
+# ========================================================================
+# SYNC FUNCTIONS (merge session changes back to global config)
+# ========================================================================
+# Based on official claude-session-wrapper.sh sync logic
+
+# Merge a specific key from source JSON to destination JSON
+# Usage: _glm_merge_json_key <src_file> <dst_file> <key>
+_glm_merge_json_key() {
+    local src="$1"
+    local dst="$2"
+    local key="$3"
+
+    [[ -f "$src" ]] || return 0
+
+    # Use python3 for JSON merging (same as official script)
+    /usr/bin/python3 - "$src" "$dst" "$key" <<'PY' 2>/dev/null
+import json
+import os
+import stat
+import sys
+import tempfile
+
+src, dst, key = sys.argv[1], sys.argv[2], sys.argv[3]
+
+try:
+    with open(src, "r", encoding="utf-8") as f:
+        src_data = json.load(f)
+except (json.JSONDecodeError, FileNotFoundError):
+    sys.exit(0)
+
+src_obj = src_data.get(key)
+if not isinstance(src_obj, dict):
+    sys.exit(0)
+
+try:
+    if os.path.exists(dst):
+        with open(dst, "r", encoding="utf-8") as f:
+            dst_data = json.load(f)
+        if not isinstance(dst_data, dict):
+            dst_data = {}
+    else:
+        dst_data = {}
+except (json.JSONDecodeError, FileNotFoundError):
+    dst_data = {}
+
+dst_obj = dst_data.get(key)
+if not isinstance(dst_obj, dict):
+    dst_obj = {}
+
+dst_obj.update(src_obj)
+dst_data[key] = dst_obj
+
+dst_dir = os.path.dirname(dst) or "."
+fd, tmp_path = tempfile.mkstemp(prefix=".tmp-glm-sync-", dir=dst_dir)
+try:
+    with os.fdopen(fd, "w", encoding="utf-8") as f:
+        json.dump(dst_data, f, indent=2, ensure_ascii=False)
+        f.write("\n")
+    os.chmod(tmp_path, stat.S_IRUSR | stat.S_IWUSR)
+    os.replace(tmp_path, dst)
+except Exception:
+    if os.path.exists(tmp_path):
+        os.unlink(tmp_path)
+    raise
+PY
+    local merge_rc=$?
+    if (( merge_rc != 0 )); then
+        echo "[claude-by-glm] Warning: Failed to sync key '$key'" >&2
+        return 1
+    fi
+    return 0
+}
+
+# Sync session changes back to global config
+# Called on session exit before cleanup
+_glm_sync_to_global() {
+    local session_dir="$1"
+    local global_claude_json="$HOME/.claude.json"
+    local global_settings="$HOME/.claude/settings.json"
+
+    # Sync mcpServers from session .claude.json to global
+    if [[ -f "$session_dir/.claude.json" ]]; then
+        _glm_merge_json_key "$session_dir/.claude.json" "$global_claude_json" "mcpServers"
+    fi
+
+    # Sync enabledPlugins from session settings.json to global
+    if [[ -f "$session_dir/settings.json" ]]; then
+        _glm_merge_json_key "$session_dir/settings.json" "$global_settings" "enabledPlugins"
+    fi
+}
+
 # Main execution
 main() {
     # Set restrictive umask for security (all files/dirs created will be owner-only)
@@ -243,26 +334,38 @@ main() {
     # ========================================================================
     # COPY MUTABLE CONFIG (session-specific, can diverge independently)
     # ========================================================================
-    # Copy from GLM template directory if available, otherwise create minimal
+    # Copy from official Claude config (priority) or GLM template
+    # Official config includes enabledPlugins for plugin recognition
     local glm_template="$HOME/.claude-glm"
+    local official_config="$HOME/.claude"
 
     for cfg in settings.json settings.local.json; do
-        if [[ -f "$glm_template/$cfg" ]]; then
-            # Copy from GLM template with secure permissions
+        if [[ -f "$official_config/$cfg" ]]; then
+            # Priority: copy from official Claude config (includes enabledPlugins)
+            if ! /bin/cp "$official_config/$cfg" "$session_dir/$cfg" 2>/dev/null; then
+                print_info "Warning: Could not copy $cfg from ~/.claude"
+            else
+                chmod 600 "$session_dir/$cfg" 2>/dev/null || true
+            fi
+        elif [[ -f "$glm_template/$cfg" ]]; then
+            # Fallback: copy from GLM template
             if ! /bin/cp "$glm_template/$cfg" "$session_dir/$cfg" 2>/dev/null; then
                 print_info "Warning: Could not copy $cfg from template"
             else
                 chmod 600 "$session_dir/$cfg" 2>/dev/null || true
             fi
-        elif [[ -f "$HOME/.claude/$cfg" ]]; then
-            # Fallback: copy from official Claude config
-            if ! /bin/cp "$HOME/.claude/$cfg" "$session_dir/$cfg" 2>/dev/null; then
-                print_info "Warning: Could not copy $cfg from ~/.claude"
-            else
-                chmod 600 "$session_dir/$cfg" 2>/dev/null || true
-            fi
         fi
     done
+
+    # Copy ~/.claude.json (global MCP server configurations) to session
+    # This enables MCP servers like model-bridge in isolated sessions
+    if [[ -f "$HOME/.claude.json" ]]; then
+        if ! /bin/cp "$HOME/.claude.json" "$session_dir/.claude.json" 2>/dev/null; then
+            print_info "Warning: Could not copy .claude.json from home directory"
+        else
+            chmod 600 "$session_dir/.claude.json" 2>/dev/null || true
+        fi
+    fi
 
     # Ensure at least a minimal settings.json exists
     if [[ ! -f "$session_dir/settings.json" ]]; then
@@ -284,9 +387,9 @@ EOF
 
     print_info "GLM session isolated: $session_dir"
 
-    # Setup automatic cleanup of session directory on exit
-    # Use absolute path to prevent PATH poisoning
-    trap '/bin/rm -rf "$session_dir" 2>/dev/null' EXIT
+    # Setup sync and cleanup on exit
+    # Sync session changes to global config before cleanup
+    trap '_glm_sync_to_global "$session_dir"; /bin/rm -rf "$session_dir" 2>/dev/null' EXIT
 
     # NOW fetch credentials - ALL external commands completed before this point
     # Windows special handling
